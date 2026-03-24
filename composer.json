@@ -1,0 +1,7 @@
+{
+    "require": {
+        "barryvdh/laravel-dompdf": "^3.1",
+        "maatwebsite/excel": "^3.1",
+        "clevpro/laravel-quickbooks": "^1.0"
+    }
+}

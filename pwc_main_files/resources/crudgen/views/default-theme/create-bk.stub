@@ -1,0 +1,34 @@
+@extends('DummyExtends')
+
+@section('DummySection')
+
+	@if($errors->any())
+		<div class="alert alert-danger">
+			@foreach ($errors->all() as $error)
+				{{ $error }} <br>
+			@endforeach
+		</div>
+	@endif
+
+	{!! Form::open(['route' => 'DummyVariable.store']) !!}
+
+DummyFormCreate
+
+		<form method="POST" action="{{ url('/%%routeGroup%%%%viewName%%') }}" accept-charset="UTF-8"
+                          class="form-horizontal" enctype="multipart/form-data">
+                        {{ csrf_field() }}
+
+                        %%formFieldsHtml%%
+
+<div class="form-group">
+    <div class="col-md-offset-4 col-md-4">
+        <input class="btn btn-primary" type="submit" value="{{ $submitButtonText??'Create' }}">
+    </div>
+</div>
+
+                    </form>
+
+                    
+
+
+@stop
