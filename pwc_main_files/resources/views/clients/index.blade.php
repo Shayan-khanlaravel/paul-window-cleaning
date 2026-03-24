@@ -162,10 +162,32 @@
                                                 </thead>
                                                 <tbody>
                                                     @foreach ($clients->where('is_child', 0) as $index => $client)
+                                                        @php
+                                                            $parentRouteName =
+                                                                optional($client->clientRoute->first())->name ?? '';
+                                                            $childSearchBlob = $client->childClients
+                                                                ->map(function ($c) {
+                                                                    $parts = array_filter([
+                                                                        $c->name ?? '',
+                                                                        $c->formatted_phone ?? '',
+                                                                        $c->address ?? '',
+                                                                        $c->city ?? '',
+                                                                        optional($c->clientRoute->first())->name ?? '',
+                                                                        optional($c->clientRoute->last())->name ?? '',
+                                                                    ]);
+                                                                    return \Illuminate\Support\Str::lower(
+                                                                        trim(implode(' ', $parts)),
+                                                                    );
+                                                                })
+                                                                ->filter()
+                                                                ->implode(' ');
+                                                        @endphp
                                                         <tr class="parent-row {{ count($client->childClients) > 0 ? 'has-children' : '' }}"
                                                             data-client-id="{{ $client->id }}"
                                                             data-client-type="{{ $client->client_type ?? '' }}"
                                                             data-payment-type="{{ $client->payment_type ?? '' }}"
+                                                            data-parent-route="{{ $parentRouteName }}"
+                                                            data-child-search="{{ e($childSearchBlob) }}"
                                                             data-child-routes="{{ $client->childClients->map(fn($c) => optional($c->clientRoute->first())->name)->filter()->implode('||') }}">
                                                             <td>
                                                                 @if (count($client->childClients) > 0)
@@ -410,10 +432,32 @@
                                                 </thead>
                                                 <tbody>
                                                     @foreach ($clients->where('status', 0)->where('is_child', 0)->whereNotNull('staff_id') as $client)
+                                                        @php
+                                                            $parentRouteNamePot =
+                                                                optional($client->clientRoute->first())->name ?? '';
+                                                            $childSearchBlobPot = $client->childClients
+                                                                ->map(function ($c) {
+                                                                    $parts = array_filter([
+                                                                        $c->name ?? '',
+                                                                        $c->formatted_phone ?? '',
+                                                                        $c->address ?? '',
+                                                                        $c->city ?? '',
+                                                                        optional($c->staff)->name ?? '',
+                                                                        optional($c->clientRoute->first())->name ?? '',
+                                                                    ]);
+                                                                    return \Illuminate\Support\Str::lower(
+                                                                        trim(implode(' ', $parts)),
+                                                                    );
+                                                                })
+                                                                ->filter()
+                                                                ->implode(' ');
+                                                        @endphp
                                                         <tr class="parent-row {{ count($client->childClients) > 0 ? 'has-children' : '' }}"
                                                             data-client-id="{{ $client->id }}"
                                                             data-client-type="{{ $client->client_type ?? '' }}"
                                                             data-payment-type="{{ $client->payment_type ?? '' }}"
+                                                            data-parent-route="{{ $parentRouteNamePot }}"
+                                                            data-child-search="{{ e($childSearchBlobPot) }}"
                                                             data-child-routes="{{ $client->childClients->map(fn($c) => optional($c->clientRoute->first())->name)->filter()->implode('||') }}">
                                                             <td>
                                                                 @if (count($client->childClients) > 0)
@@ -604,9 +648,32 @@
                                                 </thead>
                                                 <tbody>
                                                     @foreach ($clients->where('staff_id', auth()->id())->where('is_child', 0) as $client)
-                                                        <tr class="parent-row" data-client-id="{{ $client->id }}"
+                                                        @php
+                                                            $parentRouteNameStaff =
+                                                                optional($client->clientRoute->first())->name ?? '';
+                                                            $childSearchBlobStaff = $client->childClients
+                                                                ->map(function ($c) {
+                                                                    $parts = array_filter([
+                                                                        $c->name ?? '',
+                                                                        $c->formatted_phone ?? '',
+                                                                        $c->address ?? '',
+                                                                        $c->city ??
+                                                                            ($c->user?->profile?->city ?? ''),
+                                                                        optional($c->clientRoute->first())->name ?? '',
+                                                                    ]);
+                                                                    return \Illuminate\Support\Str::lower(
+                                                                        trim(implode(' ', $parts)),
+                                                                    );
+                                                                })
+                                                                ->filter()
+                                                                ->implode(' ');
+                                                        @endphp
+                                                        <tr class="parent-row {{ $client->childClients && $client->childClients->count() > 0 ? 'has-children' : '' }}"
+                                                            data-client-id="{{ $client->id }}"
                                                             data-client-type="{{ $client->client_type ?? '' }}"
                                                             data-payment-type="{{ $client->payment_type ?? '' }}"
+                                                            data-parent-route="{{ $parentRouteNameStaff }}"
+                                                            data-child-search="{{ e($childSearchBlobStaff) }}"
                                                             data-child-routes="{{ $client->childClients->map(fn($c) => optional($c->clientRoute->first())->name)->filter()->implode('||') }}">
                                                             <td>
                                                                 @if ($client->childClients && $client->childClients->count() > 0)
@@ -776,6 +843,66 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script>
         $(document).ready(function() {
+            var currentSearchVal = '';
+            var currentRouteFilter = '';
+            var expandedParentIds = new Set();
+
+            function resolveBranchContainer($table) {
+                if ($table.hasClass('potential_clients_table')) {
+                    return '#childRowsContainerPotential';
+                }
+                if ($('#childRowsContainerStaff').length) {
+                    return '#childRowsContainerStaff';
+                }
+                return '#childRowsContainer';
+            }
+
+            /** Branch rows must be clones: DataTables draw() drops non-model <tr> from the DOM. */
+            function restoreBranchesAfterDraw(dtApi) {
+                var $table = $(dtApi.table().node());
+                var containerId = resolveBranchContainer($table);
+
+                $table.find('tbody tr.branch-row-inserted').remove();
+
+                var searchVal = currentSearchVal;
+                $table.find('tbody tr.parent-row').each(function() {
+                    var $parent = $(this);
+                    var parentId = String($parent.attr('data-client-id') || '');
+                    if (!parentId) return;
+
+                    var childSearch = ($parent.attr('data-child-search') || '').toLowerCase();
+                    var matchSearch = !!(searchVal && childSearch.indexOf(searchVal) !== -1);
+                    var manuallyExpanded = expandedParentIds.has(parentId);
+                    if (!manuallyExpanded && !matchSearch) return;
+
+                    var $tplRows = $(containerId + ' tbody tr.child-row[data-parent-id="' + parentId +
+                        '"]');
+                    if (!$tplRows.length) return;
+
+                    var $insertAfter = $parent;
+                    $tplRows.each(function() {
+                        var $clone = $(this).clone(true, true);
+                        $clone.addClass('branch-row-inserted');
+                        $clone.insertAfter($insertAfter);
+                        $insertAfter = $clone;
+                    });
+
+                    var $icon = $parent.find('.expand-icon');
+                    $icon.removeClass('fa-plus').addClass('fa-minus');
+                    $parent.find('.expand-btn').attr('aria-expanded', 'true');
+
+                    var $inserted = $table.find('tr.branch-row-inserted[data-parent-id="' + parentId + '"]');
+                    if (currentRouteFilter) {
+                        $inserted.each(function() {
+                            var cr = ($(this).attr('data-route-name') || '').trim();
+                            $(this).toggle(cr === currentRouteFilter);
+                        });
+                    } else {
+                        $inserted.show();
+                    }
+                });
+            }
+
             // Export to Excel (unchanged)
             $(document).on('click', '#exportExcel', function() {
                 let exportData = [];
@@ -986,65 +1113,44 @@
                 });
             });
 
-            // Expand/Collapse child rows on button click (handles both clients_table and potential_clients_table)
+            // Expand/Collapse: insert clones only — originals stay in hidden container for search + redraw safety.
             $(document).on('click', '.expand-btn', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
 
                 var $btn = $(this);
                 var $icon = $btn.find('.expand-icon');
-                var parentId = $btn.data('parent-id');
+                var parentId = String($btn.attr('data-parent-id') || '');
                 var $parentRow = $btn.closest('tr.parent-row');
                 var $table = $btn.closest('table');
-
-                // Determine which hidden container to use based on table type
-                var containerId = '#childRowsContainer';
-                if ($table.hasClass('potential_clients_table')) {
-                    containerId = '#childRowsContainerPotential';
-                } else if ($('#childRowsContainerStaff').length && $table.closest('.staff_manag').length) {
-                    containerId = '#childRowsContainerStaff';
-                }
-
-                // Get child rows from hidden container
-                var $childRows = $(containerId + ' tr.child-row[data-parent-id="' + parentId + '"]');
-
-                // Also check if already in table
-                var $tableChildRows = $table.find('tbody tr.child-row[data-parent-id="' + parentId + '"]');
+                var containerId = resolveBranchContainer($table);
+                var $childTemplates = $(containerId + ' tbody tr.child-row[data-parent-id="' + parentId + '"]');
 
                 if ($icon.hasClass('fa-plus')) {
-                    // Move child rows from hidden container to table (after parent row)
+                    expandedParentIds.add(parentId);
                     var $insertAfter = $parentRow;
-                    $childRows.each(function() {
-                        $(this).insertAfter($insertAfter);
-                        $insertAfter = $(this);
+                    $childTemplates.each(function() {
+                        var $clone = $(this).clone(true, true);
+                        $clone.addClass('branch-row-inserted');
+                        $clone.insertAfter($insertAfter);
+                        $insertAfter = $clone;
                     });
-
-                    // Show child rows, but filter by active route if set
                     $icon.removeClass('fa-plus').addClass('fa-minus');
-                    var $allInserted = $table.find('tbody tr.child-row[data-parent-id="' + parentId + '"]');
+                    $btn.attr('aria-expanded', 'true');
+                    var $inserted = $table.find('tr.branch-row-inserted[data-parent-id="' + parentId + '"]');
                     if (currentRouteFilter) {
-                        $allInserted.each(function() {
+                        $inserted.each(function() {
                             var childRoute = ($(this).attr('data-route-name') || '').trim();
-                            if (childRoute === currentRouteFilter) {
-                                $(this).show();
-                            } else {
-                                $(this).hide();
-                            }
+                            $(this).toggle(childRoute === currentRouteFilter);
                         });
                     } else {
-                        $allInserted.show();
+                        $inserted.show();
                     }
                 } else {
-                    // Collapse - hide child rows and move back to container
+                    expandedParentIds.delete(parentId);
                     $icon.removeClass('fa-minus').addClass('fa-plus');
-
-                    // Get all child rows in table for this parent
-                    var $allChildRows = $table.find('tbody tr.child-row[data-parent-id="' + parentId +
-                        '"]');
-                    $allChildRows.hide();
-
-                    // Move back to hidden container
-                    $allChildRows.appendTo(containerId + ' tbody');
+                    $btn.attr('aria-expanded', 'false');
+                    $table.find('tr.branch-row-inserted[data-parent-id="' + parentId + '"]').remove();
                 }
             });
 
@@ -1101,6 +1207,9 @@
                         if ($(row).hasClass('child-row')) {
                             $(row).addClass('dt-ignore');
                         }
+                    },
+                    drawCallback: function() {
+                        restoreBranchesAfterDraw(this.api());
                     }
                 });
             }
@@ -1142,6 +1251,9 @@
                         if ($(row).hasClass('child-row')) {
                             $(row).addClass('dt-ignore');
                         }
+                    },
+                    drawCallback: function() {
+                        restoreBranchesAfterDraw(this.api());
                     }
                 });
             }
@@ -1150,104 +1262,44 @@
             var clientsTable = initClientsTable();
             var potentialTable = initPotentialTable();
 
-            // Global search (assumes one .custom_search_box; if per-tab, add data-table attr)
-            // $('.custom_search_box').on("input", function() {
-            //     var val = $(this).val();
-            //     if (clientsTable){
-            //         clientsTable.search(val).draw();
-            //     }
-            //     if (potentialTable) potentialTable.search(val).draw(); // Or target active tab only
-            // });
-// Replace your existing search handler and route filter section with this:
-
-// Global search
+            // Custom search (built-in DataTables search only sees parent columns; branches use data-child-search).
             $('.custom_search_box').on("input", function() {
-                var val = $(this).val().toLowerCase().trim();
-
-                if (clientsTable) clientsTable.search(val).draw();
-                if (potentialTable) potentialTable.search(val).draw();
+                currentSearchVal = $(this).val().toLowerCase().trim();
+                if (clientsTable) clientsTable.draw();
+                if (potentialTable) potentialTable.draw();
             });
 
-// Custom DataTables filter: show parent if its own data OR any child/branch matches search
-            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-                var $row = $(settings.aoData[dataIndex].nTr);
-                if (!$row.hasClass('parent-row')) return true;
-
-                var searchVal = $('.custom_search_box').val().toLowerCase().trim();
-
-                // Route filter (existing logic)
-                if (currentRouteFilter) {
-                    var parentRoute = (data[6] || '').trim();
-                    var childRoutes = ($row.attr('data-child-routes') || '').split('||').map(function(r) { return r.trim(); });
-                    var routeMatch = parentRoute === currentRouteFilter || childRoutes.indexOf(currentRouteFilter) !== -1;
-                    if (!routeMatch) return false;
-                }
-
-                // No search active — show row
-                if (!searchVal) return true;
-
-                // Check if parent row data matches
-                var rowText = data.join(' ').toLowerCase();
-                if (rowText.indexOf(searchVal) !== -1) return true;
-
-                // Check child/branch rows in hidden containers
-                var parentId = $row.attr('data-client-id');
-                var matched = false;
-
-                $('#childRowsContainer tr.child-row[data-parent-id="' + parentId + '"], ' +
-                    '#childRowsContainerPotential tr.child-row[data-parent-id="' + parentId + '"], ' +
-                    '#childRowsContainerStaff tr.child-row[data-parent-id="' + parentId + '"], ' +
-                    'table tbody tr.child-row[data-parent-id="' + parentId + '"]'
-                ).each(function() {
-                    if ($(this).text().toLowerCase().indexOf(searchVal) !== -1) {
-                        matched = true;
-                        return false; // break
+            if (!window.__clientListExtSearchBound) {
+                window.__clientListExtSearchBound = true;
+                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                    var $tbl = $(settings.nTable);
+                    if (!$tbl.hasClass('clients_table') && !$tbl.hasClass('potential_clients_table')) {
+                        return true;
                     }
-                });
 
-                return matched;
-            });
+                    var $row = $(settings.aoData[dataIndex].nTr);
+                    if (!$row.hasClass('parent-row')) return true;
 
-            // Add this after DataTable init — attach drawCallback
-            function attachDrawCallback(table, containerId) {
-                table.on('draw', function() {
-                    var searchVal = $('.custom_search_box').val().toLowerCase().trim();
-                    if (!searchVal) return;
-
-                    // For each visible parent row, auto-expand if a branch matches
-                    table.rows({ search: 'applied' }).every(function() {
-                        var $row = $(this.node());
-                        if (!$row.hasClass('parent-row')) return;
-
-                        var parentId = $row.attr('data-client-id');
-                        var $btn = $row.find('.expand-btn');
-                        var $icon = $btn.find('.expand-icon');
-
-                        // Check if any child matches
-                        var $childRows = $(containerId + ' tr.child-row[data-parent-id="' + parentId + '"]');
-                        var anyChildMatches = false;
-                        $childRows.each(function() {
-                            if ($(this).text().toLowerCase().indexOf(searchVal) !== -1) {
-                                anyChildMatches = true;
-                                return false;
-                            }
+                    if (currentRouteFilter) {
+                        var parentRoute = ($row.attr('data-parent-route') || '').trim();
+                        var childRoutes = ($row.attr('data-child-routes') || '').split('||').map(function(r) {
+                            return r.trim();
                         });
+                        var routeMatch = parentRoute === currentRouteFilter ||
+                            childRoutes.indexOf(currentRouteFilter) !== -1;
+                        if (!routeMatch) return false;
+                    }
 
-                        if (anyChildMatches && $icon.hasClass('fa-plus')) {
-                            // Auto-expand
-                            var $insertAfter = $row;
-                            $childRows.each(function() {
-                                $(this).insertAfter($insertAfter).show();
-                                $insertAfter = $(this);
-                            });
-                            $icon.removeClass('fa-plus').addClass('fa-minus');
-                        }
-                    });
+                    var searchVal = currentSearchVal;
+                    if (!searchVal) return true;
+
+                    var rowText = data.join(' ').toLowerCase();
+                    if (rowText.indexOf(searchVal) !== -1) return true;
+
+                    var childSearch = ($row.attr('data-child-search') || '').toLowerCase();
+                    return childSearch.indexOf(searchVal) !== -1;
                 });
             }
-
-            attachDrawCallback(clientsTable, '#childRowsContainer');
-            attachDrawCallback(potentialTable, '#childRowsContainerPotential');
 
             // Load saved sort preference from localStorage
             var savedSort = localStorage.getItem('clientSortPreference') || 'recent';
@@ -1294,30 +1346,6 @@
                     if (clientsTable) clientsTable.order([2, 'desc']).draw();
                     if (potentialTable) potentialTable.order([3, 'desc']).draw();
                 }
-            });
-
-            // Custom route filter variable
-            var currentRouteFilter = '';
-
-            // Custom DataTables filter: show parent if its own route OR any child route matches
-            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-                if (!currentRouteFilter) return true; // No filter active
-
-                var $row = $(settings.aoData[dataIndex].nTr);
-                // Only apply to parent rows
-                if (!$row.hasClass('parent-row')) return true;
-
-                // Check parent's own route (column 6)
-                var parentRoute = (data[6] || '').trim();
-                if (parentRoute === currentRouteFilter) return true;
-
-                // Check child routes from data attribute
-                var childRoutes = ($row.attr('data-child-routes') || '').split('||').map(function(r) { return r.trim(); });
-                for (var i = 0; i < childRoutes.length; i++) {
-                    if (childRoutes[i] === currentRouteFilter) return true;
-                }
-
-                return false;
             });
 
             // Route filter function
@@ -1465,9 +1493,11 @@
             // Re-init on tab shown (for layout/visibility)
             $('#pills-clients-tab').on('shown.bs.tab', function() {
                 clientsTable = initClientsTable();
+                clientsTable.draw();
             });
             $('#pills-potential_clients-tab').on('shown.bs.tab', function() {
                 potentialTable = initPotentialTable();
+                potentialTable.draw();
             });
         });
     </script>
