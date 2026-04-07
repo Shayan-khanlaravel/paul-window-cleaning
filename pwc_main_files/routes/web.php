@@ -99,6 +99,13 @@ Route::group(['middleware' => ['auth']], function () {
         Route::get('client/invoice/{invoice_id?}', 'clientInvoices')->name('client.invoices');
         Route::post('create-quickbooks-invoice', 'createQuickBooksInvoice')->name('create.quickbooks.invoice');
     });
+
+    Route::controller(\App\Http\Controllers\PayrollController::class)->group(function () {
+        Route::get('payroll', 'index')->name('payroll.index');
+        Route::get('payroll/{id}', 'show')->name('payroll.show');
+        Route::post('payroll/{id}/bonus', 'saveBonus')->name('payroll.bonus.save');
+        Route::post('payroll/{id}/email', 'sendEmail')->name('payroll.email');
+    });
 });
 
 Route::controller(WebsiteController::class)->group(function () {
