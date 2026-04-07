@@ -460,7 +460,7 @@
                                                     @forelse ($schedule['routes'] as $route)
                                                         <div class="muller_honda_wrapper muller_honda_wrapper_update">
                                                             <div>
-                                                                <h2>{{ ucfirst($route['client_name']) }} 
+                                                                <h2>{{ ucfirst($route['client_name']) }}
                                                                 </h2>
                                                                 <div class="muller_honda_details">
                                                                     <div>

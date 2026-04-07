@@ -91,7 +91,7 @@ p {color: #4A4A4A;font-family: 'Hellix-Regular';font-size: 12px;line-height: nor
 .preloader .loading_icon span {
     opacity: 0.6;
     animation: pulse 0.8s infinite ease-in-out;
-;
+    ;
 }
 
 @keyframes pulse {
@@ -1913,7 +1913,7 @@ span.brown_color_td_span {
 
 .custom_radio input[type="checkbox"]:checked+label {
     background: #00ADEE;
-;
+    ;
     color: #fff;
 }
 
@@ -3587,7 +3587,7 @@ body .error {
 .staff_request_modal.staff_testimonial_modal .staff_request_img_details_wrap {
     border-bottom: 1px solid #E7E7E7;
     margin-bottom: 20px;
-;
+    ;
     display: flex;
     align-items: center;
     gap: 5px
@@ -4025,3 +4025,9 @@ body .error {
 .btn_red.delete_price_list,.remove_append_time .btn_red {border-radius: 5px;}
 .btn.btn-danger:hover:not(.btn-active) {background-color: #A80000 !important;}
 .btn>i{padding: 0;}
+
+.priority_checkbox label {font-size: 20px;font-family: 'Hellix-SemiBold';}
+.priority_checkbox input.form-check-input {vertical-align: middle;margin: 0;width: 20px;height: 20px;}
+.priority_checkbox {display: flex;align-items: center;gap: 10px;}
+.customer_payroll_sheets .payroll_cards {background: #CCEFFC;}
+.customer_payroll_sheets .payroll_cards h3 {margin-bottom: 15px;}

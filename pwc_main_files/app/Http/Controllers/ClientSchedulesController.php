@@ -724,61 +724,61 @@ class ClientSchedulesController extends Controller
         // =====================
         // SELECT ALL LOGIC
         // =====================
-        if ($selectAll) {
-            $allSchedules = ClientSchedule::orderBy('start_date', 'asc')->get();
-
-            $movedCount = 0;
-            $skippedCount = 0;
-            $errors = [];
-
-            foreach ($allSchedules as $schedule) {
-                // Monthly aur biMonthly skip karo
-                $serviceFrequency = optional($schedule->clientName)->service_frequency;
-                if ($serviceFrequency == 'monthly' || $serviceFrequency == 'biMonthly') {
-                    $skippedCount++;
-                    $clientName = optional($schedule->clientName)->name ?? 'Unknown';
-                    $errors[] = $clientName . ' has ' . ($serviceFrequency == 'monthly' ? 'Monthly' : 'BiMonthly') . ' service frequency and cannot be moved.';
-                    continue;
-                }
-
-                $currentWeekNumber = (int) str_replace('week', '', trim($schedule->week));
-
-                if ($direction === 'next') {
-                    $newWeekNumber = ($currentWeekNumber == 3) ? 0 : $currentWeekNumber + 1;
-                } else {
-                    $newWeekNumber = ($currentWeekNumber == 0) ? 3 : $currentWeekNumber - 1;
-                }
-
-                $newStartDate = \Carbon\Carbon::parse($schedule->start_date)->addDays($daysToMove);
-                $newEndDate = \Carbon\Carbon::parse($schedule->end_date)->addDays($daysToMove);
-
-                $schedule->week = 'week' . $newWeekNumber;
-                $schedule->start_date = $newStartDate->format('Y-m-d');
-                $schedule->end_date = $newEndDate->format('Y-m-d');
-                $schedule->month = $newStartDate->format('F');
-                $schedule->week_month = $newStartDate->format('F');
-                $schedule->is_increase = 1;
-
-                if (!empty($schedule->note_date)) {
-                    try {
-                        $schedule->note_date = \Carbon\Carbon::parse($schedule->note_date)->addDays($daysToMove)->format('Y-m-d');
-                    } catch (\Exception $e) {
-                        // note_date as is
-                    }
-                }
-
-                $schedule->save();
-                $movedCount++;
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'All schedules permanently moved ' . ($direction === 'next' ? 'forward' : 'backward') . ' successfully.',
-                'moved_count' => $movedCount,
-                'skipped_count' => $skippedCount,
-                'errors' => $errors
-            ]);
-        }
+//        if ($selectAll) {
+//            $allSchedules = ClientSchedule::orderBy('start_date', 'asc')->get();
+//
+//            $movedCount = 0;
+//            $skippedCount = 0;
+//            $errors = [];
+//
+//            foreach ($allSchedules as $schedule) {
+//                // Monthly aur biMonthly skip karo
+//                $serviceFrequency = optional($schedule->clientName)->service_frequency;
+//                if ($serviceFrequency == 'monthly' || $serviceFrequency == 'biMonthly') {
+//                    $skippedCount++;
+//                    $clientName = optional($schedule->clientName)->name ?? 'Unknown';
+//                    $errors[] = $clientName . ' has ' . ($serviceFrequency == 'monthly' ? 'Monthly' : 'BiMonthly') . ' service frequency and cannot be moved.';
+//                    continue;
+//                }
+//
+//                $currentWeekNumber = (int) str_replace('week', '', trim($schedule->week));
+//
+//                if ($direction === 'next') {
+//                    $newWeekNumber = ($currentWeekNumber == 3) ? 0 : $currentWeekNumber + 1;
+//                } else {
+//                    $newWeekNumber = ($currentWeekNumber == 0) ? 3 : $currentWeekNumber - 1;
+//                }
+//
+//                $newStartDate = \Carbon\Carbon::parse($schedule->start_date)->addDays($daysToMove);
+//                $newEndDate = \Carbon\Carbon::parse($schedule->end_date)->addDays($daysToMove);
+//
+//                $schedule->week = 'week' . $newWeekNumber;
+//                $schedule->start_date = $newStartDate->format('Y-m-d');
+//                $schedule->end_date = $newEndDate->format('Y-m-d');
+//                $schedule->month = $newStartDate->format('F');
+//                $schedule->week_month = $newStartDate->format('F');
+//                $schedule->is_increase = 1;
+//
+//                if (!empty($schedule->note_date)) {
+//                    try {
+//                        $schedule->note_date = \Carbon\Carbon::parse($schedule->note_date)->addDays($daysToMove)->format('Y-m-d');
+//                    } catch (\Exception $e) {
+//                        // note_date as is
+//                    }
+//                }
+//
+//                $schedule->save();
+//                $movedCount++;
+//            }
+//
+//            return response()->json([
+//                'success' => true,
+//                'message' => 'All schedules permanently moved ' . ($direction === 'next' ? 'forward' : 'backward') . ' successfully.',
+//                'moved_count' => $movedCount,
+//                'skipped_count' => $skippedCount,
+//                'errors' => $errors
+//            ]);
+//        }
 
         // =====================
         // SELECTIVE MOVE LOGIC

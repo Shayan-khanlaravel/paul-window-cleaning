@@ -730,7 +730,8 @@
                                                                         @if ($client->clientRouteStaff && $client->clientRouteStaff->count() > 0)
                                                                             @if ($client->status == 1)
                                                                                 @if ($client->service_frequency)
-                                                                                    <li><a class="dropdown-item"
+                                                                                    <li>
+                                                                                        <a class="dropdown-item"
                                                                                             href="{{ route('client-schedule', [$client->id]) }}">Schedule</a>
                                                                                     </li>
                                                                                 @else
@@ -901,6 +902,34 @@
                         $inserted.show();
                     }
                 });
+            }
+
+            var CLIENT_SORT_STORAGE_KEY = 'clientSortPreference';
+
+            function readClientSortPreference() {
+                var v = localStorage.getItem(CLIENT_SORT_STORAGE_KEY);
+                return (v === 'az' || v === 'recent') ? v : 'recent';
+            }
+
+            function persistClientSortPreference(sortType) {
+                if (sortType === 'az' || sortType === 'recent') {
+                    localStorage.setItem(CLIENT_SORT_STORAGE_KEY, sortType);
+                }
+            }
+
+            /** Keeps admin + staff sort dropdowns aligned with saved preference */
+            function syncSortDropdowns() {
+                $('.sortFilter').val(readClientSortPreference());
+            }
+
+            function applySortOrderToTables(sortType) {
+                if (sortType === 'az') {
+                    if (clientsTable) clientsTable.order([1, 'asc']).draw();
+                    if (potentialTable) potentialTable.order([2, 'asc']).draw();
+                } else {
+                    if (clientsTable) clientsTable.order([2, 'desc']).draw();
+                    if (potentialTable) potentialTable.order([3, 'desc']).draw();
+                }
             }
 
             // Export to Excel (unchanged)
@@ -1173,8 +1202,7 @@
                 if ($.fn.DataTable.isDataTable('.clients_table')) {
                     $('.clients_table').DataTable().destroy();
                 }
-                // Get saved sort preference
-                var savedSort = localStorage.getItem('clientSortPreference') || 'recent';
+                var savedSort = readClientSortPreference();
                 var initialOrder = savedSort === 'az' ? [
                     [1, 'asc']
                 ] : [
@@ -1215,18 +1243,21 @@
             }
 
             function initPotentialTable() {
-                if ($.fn.DataTable.isDataTable('.potential_clients_table')) {
-                    $('.potential_clients_table').DataTable().destroy();
+                var $pot = $('.potential_clients_table');
+                if (!$pot.length) {
+                    return null;
                 }
-                // Get saved sort preference
-                var savedSort = localStorage.getItem('clientSortPreference') || 'recent';
+                if ($.fn.DataTable.isDataTable($pot)) {
+                    $pot.DataTable().destroy();
+                }
+                var savedSort = readClientSortPreference();
                 var initialOrder = savedSort === 'az' ? [
                     [2, 'asc']
                 ] : [
                     [3, 'desc']
                 ];
 
-                return $('.potential_clients_table').DataTable({
+                return $pot.DataTable({
                     searching: true,
                     bLengthChange: false,
                     paging: true,
@@ -1301,24 +1332,9 @@
                 });
             }
 
-            // Load saved sort preference from localStorage
-            var savedSort = localStorage.getItem('clientSortPreference') || 'recent';
-            // Always start with "all" routes on page load to show all clients
-            // Route filter preference is not saved/loaded to avoid hiding clients
-            var savedRoute = 'all';
-
-            // Set initial values
-            $('#sortByName, #sortByNamePotential').val(savedSort);
+            // Dropdowns match localStorage (DataTables already use readClientSortPreference() in init)
+            syncSortDropdowns();
             $('#sortByRoute, #sortByRouteStaff').val('all'); // Always start with "All Routes"
-
-            // Apply initial sort
-            if (savedSort === "az") {
-                if (clientsTable) clientsTable.order([1, 'asc']).draw();
-                if (potentialTable) potentialTable.order([2, 'asc']).draw();
-            } else {
-                if (clientsTable) clientsTable.order([2, 'desc']).draw();
-                if (potentialTable) potentialTable.order([3, 'desc']).draw();
-            }
 
             // Make sure all rows are visible on initial load (no route filter)
             setTimeout(function() {
@@ -1331,20 +1347,17 @@
                 }
             }, 100);
 
-            // Name sort filter - sync both selects
-            $('#sortByName, #sortByNamePotential').on('change', function() {
+            $(document).on('change', '.sortFilter', function() {
                 var sortType = $(this).val();
-                localStorage.setItem('clientSortPreference', sortType);
+                persistClientSortPreference(sortType);
+                $('.sortFilter').val(sortType);
+                applySortOrderToTables(sortType);
+            });
 
-                // Sync both selects
-                $('#sortByName, #sortByNamePotential').val(sortType);
-
-                if (sortType === "az") {
-                    if (clientsTable) clientsTable.order([1, 'asc']).draw();
-                    if (potentialTable) potentialTable.order([2, 'asc']).draw();
-                } else if (sortType === "recent") {
-                    if (clientsTable) clientsTable.order([2, 'desc']).draw();
-                    if (potentialTable) potentialTable.order([3, 'desc']).draw();
+            $(window).on('pageshow', function(e) {
+                if (e.originalEvent && e.originalEvent.persisted) {
+                    syncSortDropdowns();
+                    applySortOrderToTables(readClientSortPreference());
                 }
             });
 
@@ -1493,11 +1506,13 @@
             // Re-init on tab shown (for layout/visibility)
             $('#pills-clients-tab').on('shown.bs.tab', function() {
                 clientsTable = initClientsTable();
-                clientsTable.draw();
+                syncSortDropdowns();
+                if (clientsTable) clientsTable.draw();
             });
             $('#pills-potential_clients-tab').on('shown.bs.tab', function() {
                 potentialTable = initPotentialTable();
-                potentialTable.draw();
+                syncSortDropdowns();
+                if (potentialTable) potentialTable.draw();
             });
         });
     </script>

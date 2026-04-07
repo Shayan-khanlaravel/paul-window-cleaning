@@ -107,8 +107,8 @@
                                 <div class="date_range_picker_wrapper">
                                     <label class="form-label"><i class="fa-regular fa-calendar"></i></label>
                                     <input class="form-control form-control-solid" placeholder="Pick date rage" id="kt_daterangepicker_1" />
+                                    </div>
                                 </div>
-                            </div>
                             <div class="chart_wrapper">
                                 <canvas id="line-chart"></canvas>
                                 <svg style="display: none;">
@@ -128,7 +128,6 @@
                                     </defs>
                                 </svg>
                             </div>
-
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -169,34 +168,34 @@
                                 <div class="">
                                     <table class="table myTable datatable">
                                         <thead>
-                                            <tr>
-                                                <th>Account Name</th>
-                                                <th>Created Date</th>
-                                                <th>Total Price</th>
-                                                <th>Status</th>
-                                                {{-- <th>View</th> --}}
-                                            </tr>
+                                        <tr>
+                                            <th>Account Name</th>
+                                            <th>Created Date</th>
+                                            <th>Total Price</th>
+                                            <th>Status</th>
+                                            {{-- <th>View</th> --}}
+                                        </tr>
                                         </thead>
                                         <tbody>
-{{--
-                                            @forelse ($last45DaysInvoices as $invoice)
-                                                <tr>
-                                                    <td>{{ Str::limit($invoice->client->name ?? 'N/A', 15) }}</td>
-                                                    <td>{{ $invoice->created_at->format('m-d-Y') }}</td>
-                                                    <td>${{ $invoice->final_price }}</td>
-                                                    <td>
-                                                        @if ($invoice->payment_status == 'paid')
-                                                            <span class="badge badge-paid">Paid</span>
-                                                        @else
-                                                            <span class="badge badge-unpaid">Unpaid</span>
-                                                        @endif
-                                                    </td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="6">No Invoices Found</td>
-                                                </tr>
-                                            @endforelse --}}
+                                        {{--
+                                                                                    @forelse ($last45DaysInvoices as $invoice)
+                                                                                        <tr>
+                                                                                            <td>{{ Str::limit($invoice->client->name ?? 'N/A', 15) }}</td>
+                                                                                            <td>{{ $invoice->created_at->format('m-d-Y') }}</td>
+                                                                                            <td>${{ $invoice->final_price }}</td>
+                                                                                            <td>
+                                                                                                @if ($invoice->payment_status == 'paid')
+                                                                                                    <span class="badge badge-paid">Paid</span>
+                                                                                                @else
+                                                                                                    <span class="badge badge-unpaid">Unpaid</span>
+                                                                                                @endif
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    @empty
+                                                                                        <tr>
+                                                                                            <td colspan="6">No Invoices Found</td>
+                                                                                        </tr>
+                                                                                    @endforelse --}}
                                         </tbody>
                                     </table>
                                 </div>
@@ -240,7 +239,6 @@
 
                         </div>
                     </div>
-
                 </div>
             </div>
         </section>

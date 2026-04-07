@@ -409,26 +409,76 @@
     </script>
     <script>
         $(document).ready(function() {
-            $('#sortAtoZ').on('click', function() {
-                let routes = $('.route-card').get();
+            var STAFF_ROUTES_SORT_KEY = 'staffRoutesSortPreference';
+
+            function readStaffRoutesSortPreference() {
+                var v = localStorage.getItem(STAFF_ROUTES_SORT_KEY);
+                return (v === 'az' || v === 'recent') ? v : 'recent';
+            }
+
+            function persistStaffRoutesSortPreference(mode) {
+                if (mode === 'az' || mode === 'recent') {
+                    localStorage.setItem(STAFF_ROUTES_SORT_KEY, mode);
+                }
+            }
+
+            function updateSortButtonLabel(mode) {
+                var $btn = $('#sortButton');
+                if (!$btn.length) return;
+                $btn.text(mode === 'az' ? 'A to Z' : 'Most Recent');
+            }
+
+            function sortRouteCardsAZ() {
+                var routes = $('.route-card').get();
                 routes.sort(function(a, b) {
-                    let nameA = $(a).data('route-name').toUpperCase();
-                    let nameB = $(b).data('route-name').toUpperCase();
+                    var nameA = String($(a).data('route-name') || '').toUpperCase();
+                    var nameB = String($(b).data('route-name') || '').toUpperCase();
                     return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
                 });
-
                 $('.custom_row').empty().append(routes);
-            });
+            }
 
-            $('#sortMostRecent').on('click', function() {
-                let routes = $('.route-card').get();
+            function sortRouteCardsRecent() {
+                var routes = $('.route-card').get();
                 routes.sort(function(a, b) {
-                    let dateA = new Date($(a).data('date'));
-                    let dateB = new Date($(b).data('date'));
+                    var dateA = new Date($(a).data('date'));
+                    var dateB = new Date($(b).data('date'));
                     return dateB - dateA;
                 });
-
                 $('.custom_row').empty().append(routes);
+            }
+
+            function applyStaffRoutesSortFromPreference() {
+                if (!$('.route-card').length) return;
+                var mode = readStaffRoutesSortPreference();
+                updateSortButtonLabel(mode);
+                if (mode === 'az') {
+                    sortRouteCardsAZ();
+                } else {
+                    sortRouteCardsRecent();
+                }
+            }
+
+            $('#sortAtoZ').on('click', function(e) {
+                e.preventDefault();
+                persistStaffRoutesSortPreference('az');
+                sortRouteCardsAZ();
+                updateSortButtonLabel('az');
+            });
+
+            $('#sortMostRecent').on('click', function(e) {
+                e.preventDefault();
+                persistStaffRoutesSortPreference('recent');
+                sortRouteCardsRecent();
+                updateSortButtonLabel('recent');
+            });
+
+            applyStaffRoutesSortFromPreference();
+
+            $(window).on('pageshow', function(e) {
+                if (e.originalEvent && e.originalEvent.persisted) {
+                    applyStaffRoutesSortFromPreference();
+                }
             });
         });
     </script>
