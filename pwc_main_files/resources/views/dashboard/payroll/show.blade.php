@@ -12,7 +12,7 @@
 @section('content')
 <section class="create_clients_sec">
     <div class="container-fluid custom_container">
-        
+
         <div class="row mb-4 custom_justify_between align-items-center">
             <div class="col-md-12">
                 <div class="months-pagination filter_download_dropdown_wrapper" style="display: flex; align-items: center; gap: 10px;">
@@ -56,7 +56,9 @@
                                     <th class="min-w-100px text-end">Commission</th>
                                     <th class="min-w-150px text-end">Bonus</th>
                                     <th class="min-w-100px text-end">Total Gross Pay</th>
-                                    <th class="min-w-100px text-end rounded-end">Action</th>
+                                    @if(!Auth::user()->hasRole('staff'))
+                                        <th class="min-w-100px text-end rounded-end">Action</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -95,16 +97,18 @@
                                     <td class="text-end pe-4">
                                         <span class="text-dark fw-bold d-block fs-7">${{ number_format($totalGrossPay, 2) }}</span>
                                     </td>
-                                    <td class="text-end pe-4">
-                                        <form action="{{ route('payroll.email', $staff->id) }}" method="POST">
-                                            @csrf
-                                            <input type="hidden" name="week_number" value="{{ $weekNum }}">
-                                            <input type="hidden" name="month" value="{{ $selectedMonth }}">
-                                            <button class="btn btn-sm btn-primary tooltip-btn" type="submit" title="Email to Accountant">
-                                                <i class="fa-regular fa-envelope m-0 text-white"></i>
-                                            </button>
-                                        </form>
-                                    </td>
+                                    @if(!Auth::user()->hasRole('staff'))
+                                        <td class="text-end pe-4">
+                                            <form action="{{ route('payroll.email', $staff->id) }}" method="POST">
+                                                @csrf
+                                                <input type="hidden" name="week_number" value="{{ $weekNum }}">
+                                                <input type="hidden" name="month" value="{{ $selectedMonth }}">
+                                                <button class="btn btn-sm btn-primary tooltip-btn" type="submit" title="Email to Accountant">
+                                                    <i class="fa-regular fa-envelope m-0 text-white"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    @endif
                                 </tr>
                                 @endforeach
                             </tbody>

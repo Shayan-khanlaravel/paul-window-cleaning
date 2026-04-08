@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\ClientSchedule;
 use App\Models\PayrollBonus;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\WeeklyPayrollMail;
 
@@ -91,6 +92,9 @@ class PayrollController extends Controller
         extract($cal);
 
         $staffs = User::role('staff')->get();
+        if (Auth::user()->hasRole('staff')){
+            $staffs = $staffs->where('id', Auth::id());
+        }
 
         $staffData = [];
         foreach ($staffs as $staff) {
