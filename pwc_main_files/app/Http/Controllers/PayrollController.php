@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Models\ClientSchedule;
 use App\Models\PayrollBonus;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\WeeklyPayrollMail;
 
 class PayrollController extends Controller
 {
@@ -210,14 +212,71 @@ class PayrollController extends Controller
     public function sendEmail(Request $request, $id)
     {
         $request->validate([
-            'week_number' => 'required'
+            'week_number' => 'required',
+            'month' => 'required'
         ]);
 
         $staff = User::findOrFail($id);
         $weekNum = $request->week_number;
-        // The month str like "January - February 2025" or the baseMonthName
 
-        // Return success msg for that week
+        $cal = $this->getCalendarData($request->month);
+        extract($cal);
+
+        $schedules = ClientSchedule::where('status', 'completed')
+            ->where('staff_id', $staff->id)
+            ->whereBetween('start_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
+            ->with(['clientSchedulePayment', 'clientName'])
+            ->get();
+
+        $cycleStart = $start_date->copy();
+        $targetWeekStart = null;
+        $targetWeekEnd = null;
+
+        for ($w = 1; $w <= 4; $w++) {
+            $weekStart = $cycleStart->copy();
+            $weekEnd = $cycleStart->copy()->addDays(6);
+            if ($w == $weekNum) {
+                $targetWeekStart = $weekStart;
+                $targetWeekEnd = $weekEnd;
+                break;
+            }
+            $cycleStart->addDays(7);
+        }
+
+        $grossSales = 0;
+        $commission = 0;
+
+        foreach ($schedules as $schedule) {
+            $scheduleDate = Carbon::parse($schedule->start_date);
+            if ($scheduleDate->between($targetWeekStart, $targetWeekEnd)) {
+                $price = optional($schedule->clientSchedulePayment)->final_price ?? 0;
+                $grossSales += $price;
+                $commPerc = $schedule->clientName->commission_percentage ?? 0;
+                $commission += ($price * $commPerc) / 100;
+            }
+        }
+
+        $bonus = PayrollBonus::where('staff_id', $staff->id)
+            ->where('year', $selectedYear)
+            ->where('month_name', $baseMonthName)
+            ->where('week_number', $weekNum)
+            ->sum('amount');
+
+        $totalGrossPay = $commission + $bonus;
+
+        $data = [
+            'staff_name' => $staff->name,
+            'week_number' => $weekNum,
+            'date_range' => $targetWeekStart->format('M d') . ' - ' . $targetWeekEnd->format('M d'),
+            'gross_sales' => $grossSales,
+            'commission' => $commission,
+            'bonus' => $bonus,
+            'total_gross_pay' => $totalGrossPay,
+        ];
+
+        $accountantEmail = env('ACCOUNTANT_EMAIL', 'cleaning@yopmail.com');
+        Mail::to($accountantEmail)->send(new WeeklyPayrollMail($data));
+
         return back()->with('message', "Payroll details for Week {$weekNum} emailed to accountant successfully!");
     }
 }
