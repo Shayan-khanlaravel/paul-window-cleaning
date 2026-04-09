@@ -10,7 +10,8 @@ use App\Http\Controllers\{
     ClientsController,
     UserController,
     CrudGeneratorController,
-    QuickBooksController
+    QuickBooksController,
+    ReportController
 };
 
 Route::get('/', [WebsiteController::class, 'index']);
@@ -105,6 +106,10 @@ Route::group(['middleware' => ['auth']], function () {
         Route::get('payroll/{id}', 'show')->name('payroll.show');
         Route::post('payroll/{id}/bonus', 'saveBonus')->name('payroll.bonus.save');
         Route::post('payroll/{id}/email', 'sendEmail')->name('payroll.email');
+    });
+
+    Route::controller(\App\Http\Controllers\ReportController::class)->group(function () {
+        Route::get('reports/unpaid-accounts', 'unpaidAccounts')->name('reports.unpaid');
     });
 });
 

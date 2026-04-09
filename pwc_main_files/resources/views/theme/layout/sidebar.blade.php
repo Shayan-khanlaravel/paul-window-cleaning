@@ -278,6 +278,16 @@
                                     </a>
                                 </div>
                             </div>
+                            <div class="menu-item ">
+                                <div class="menu-content">
+                                    <a href="{{ route('reports.unpaid') }}"
+                                        class="nav_list @if (request()->is('reports/unpaid*')) active @endif"
+                                        aria-current="page">
+                                        <div class="sidebar_icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                                        Unpaid Accounts
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     @elseif(auth()->user()->hasRole('admin'))
                         <div class="menu-item ">
@@ -297,6 +307,16 @@
                                     aria-current="page">
                                     <div class="sidebar_icon"><i class="fa-solid fa-money-bill-wave"></i></div>
                                     Payroll
+                                </a>
+                            </div>
+                        </div>
+                        <div class="menu-item ">
+                            <div class="menu-content">
+                                <a href="{{ route('reports.unpaid') }}"
+                                   class="nav_list @if (request()->is('reports/unpaid*')) active @endif"
+                                   aria-current="page">
+                                    <div class="sidebar_icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                                    Unpaid Accounts
                                 </a>
                             </div>
                         </div>

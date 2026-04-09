@@ -36,25 +36,25 @@
                                             <h3 class="pricePlus">
                                                 ${{ number_format($clientPriceSum, 2, '.', ',') ?? '' }}</h3>
                                         </div>
-                                        <div class="price_list_wrapper appended_price_list">
-                                            <div class="row">
-                                                <div class="txt_field mt-3 mb-3">
-                                                    <label>Price List</label>
-                                                </div>
-                                                @foreach($client->clientPrice as $price)
-                                                    <div class="col-md-3 sortable-item">
-                                                        <div class="price_list">
-                                                            <div class="price_list_box">
-                                                                <div class="table_checkbox">
-                                                                    <label>{{ $price->name ?? '' }}</label>
-                                                                </div>
-                                                                <span>${{ $price->value ?? '' }}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        </div>
+{{--                                        <div class="price_list_wrapper appended_price_list">--}}
+{{--                                            <div class="row">--}}
+{{--                                                <div class="txt_field mt-3 mb-3">--}}
+{{--                                                    <label>Price List</label>--}}
+{{--                                                </div>--}}
+{{--                                                @foreach($client->clientPrice as $price)--}}
+{{--                                                    <div class="col-md-3 sortable-item">--}}
+{{--                                                        <div class="price_list">--}}
+{{--                                                            <div class="price_list_box">--}}
+{{--                                                                <div class="table_checkbox">--}}
+{{--                                                                    <label>{{ $price->name ?? '' }}</label>--}}
+{{--                                                                </div>--}}
+{{--                                                                <span>${{ $price->value ?? '' }}</span>--}}
+{{--                                                            </div>--}}
+{{--                                                        </div>--}}
+{{--                                                    </div>--}}
+{{--                                                @endforeach--}}
+{{--                                            </div>--}}
+{{--                                        </div>--}}
                                         <!-- Service Date Input -->
                                         <div class="row custom_row mt-3">
                                             <div class="col-md-6">
