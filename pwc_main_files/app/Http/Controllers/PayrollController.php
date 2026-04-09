@@ -15,13 +15,13 @@ class PayrollController extends Controller
 {
     private function getCalendarData($selectedMonthStr)
     {
-        $currentYear = now()->year;
-        $currentMonthRaw = now()->format('F');
-        $nextMonthRaw = now()->addMonthNoOverflow()->format('F');
-        $selectedMonth = $selectedMonthStr ?? "$currentMonthRaw - $nextMonthRaw $currentYear";
+        $currentDate = now();
+        $selectedYear = $currentDate->year;
 
-        preg_match('/\d{4}/', $selectedMonth, $yearMatch);
-        $selectedYear = $yearMatch[0] ?? $currentYear;
+        if ($selectedMonthStr) {
+            preg_match('/\d{4}/', $selectedMonthStr, $yearMatch);
+            $selectedYear = $yearMatch[0] ?? $selectedYear;
+        }
 
         $firstMondayOfYear = Carbon::parse("first Monday of January $selectedYear");
 
@@ -41,11 +41,22 @@ class PayrollController extends Controller
             "December - January" => $firstMondayOfYear->copy()->addWeeks(48),
         ];
 
-        $baseMonthName = trim(str_replace($selectedYear, '', $selectedMonth));
-        if (!array_key_exists($baseMonthName, $customStartDates)) {
+        if ($selectedMonthStr) {
+            $baseMonthName = trim(str_replace($selectedYear, '', $selectedMonthStr));
+            if (!array_key_exists($baseMonthName, $customStartDates)) {
+                $baseMonthName = "January - February";
+            }
+        } else {
             $baseMonthName = "January - February";
+            foreach ($customStartDates as $range => $startDate) {
+                if ($currentDate->gte($startDate) && $currentDate->lt($startDate->copy()->addWeeks(4))) {
+                    $baseMonthName = $range;
+                    break;
+                }
+            }
         }
 
+        $selectedMonth = "$baseMonthName $selectedYear";
         $monthStartDate = $customStartDates[$baseMonthName];
         $monthEndDate = $monthStartDate->copy()->addWeeks(4)->subDay();
 

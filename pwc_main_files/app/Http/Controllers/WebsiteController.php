@@ -3516,6 +3516,7 @@ class WebsiteController extends Controller
             'start_time' => $request->start_time ?? null,
             'end_time' => $request->end_time ?? null,
             'staff_id' => auth()->user()->id,
+            'status' => $request->payment_type == "cash" ? 'paid' : 'pending',
         ]);
         //       return $value;
         // return auth()->user()->id;
