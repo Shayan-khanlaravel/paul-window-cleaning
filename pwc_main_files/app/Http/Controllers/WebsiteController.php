@@ -2121,7 +2121,7 @@ class WebsiteController extends Controller
                                 'week'                => $weekIndex,
                                 'start_date'          => $originalStartDate->toDateString(),
                                 'end_date'            => $originalEndDate->toDateString(),
-                                'note'                => $allNotes[$dateIndex] ?? '',
+                                'note'                => $allNotes[$dateIndex] ?? 'Unassigned Note ' . $dateIndex,
                                 'note_two'            => null,
                                 'note_type'           => $noteType,
                                 'note_date'           => $noteDate,
