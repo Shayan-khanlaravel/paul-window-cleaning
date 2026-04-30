@@ -49,23 +49,28 @@
                     <div class="table-responsive">
                         <table class="table align-middle gs-0 gy-4 myTable">
                             <thead>
-                                <tr class="fw-bold text-muted bg-light">
+                                <tr class="fw-bold">
                                     <th class="ps-4 min-w-100px rounded-start">Week</th>
                                     <th class="min-w-150px">Date</th>
                                     <th class="min-w-100px text-end">Gross Sales</th>
-                                    <th class="min-w-100px text-end">Commission</th>
+                                    <th class="min-w-100px text-end">Gross Commission</th>
                                     <th class="min-w-150px text-end">Bonus</th>
-                                    <th class="min-w-100px text-end">Total Gross Pay</th>
-                                    @if(!Auth::user()->hasRole('staff'))
-                                        <th class="min-w-100px text-end rounded-end">Action</th>
-                                    @endif
+                                    <th class="min-w-100px text-end rounded-end">Total Gross Pay</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($weeks as $weekNum => $weekData)
-                                    @php
-                                        $totalGrossPay = $weekData['commission'] + $weekData['bonus'];
-                                    @endphp
+                                @forelse($routePayrollData as $routeData)
+                                <tr class="bg-light">
+                                    <td class="ps-4">
+                                        <span class="text-dark fw-bold d-block fs-6">{{ $routeData['route_name'] }}</span>
+                                    </td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                @foreach($routeData['weeks'] as $weekNum => $weekData)
                                 <tr>
                                     <td class="ps-4">
                                         <span class="text-dark fw-bold d-block fs-7">{{ $weekNum }}</span>
@@ -84,6 +89,7 @@
                                     <td class="text-end">
                                         <form action="{{ route('payroll.bonus.save', $staff->id) }}" method="POST" class="d-flex align-items-center justify-content-end">
                                             @csrf
+                                            <input type="hidden" name="route_id" value="{{ $routeData['route_id'] }}">
                                             <input type="hidden" name="week_number" value="{{ $weekNum }}">
                                             <input type="hidden" name="month" value="{{ $baseMonthName }}">
                                             <input type="hidden" name="year" value="{{ $selectedYear }}">
@@ -95,22 +101,20 @@
                                         </form>
                                     </td>
                                     <td class="text-end pe-4">
-                                        <span class="text-dark fw-bold d-block fs-7">${{ number_format($totalGrossPay, 2) }}</span>
+                                        <span class="text-dark fw-bold d-block fs-7">${{ number_format($weekData['total_gross_pay'], 2) }}</span>
                                     </td>
-                                    @if(!Auth::user()->hasRole('staff'))
-                                        <td class="text-end pe-4">
-                                            <form action="{{ route('payroll.email', $staff->id) }}" method="POST">
-                                                @csrf
-                                                <input type="hidden" name="week_number" value="{{ $weekNum }}">
-                                                <input type="hidden" name="month" value="{{ $selectedMonth }}">
-                                                <button class="btn btn-sm btn-primary tooltip-btn" type="submit" title="Email to Accountant">
-                                                    <i class="fa-regular fa-envelope m-0 text-white"></i>
-                                                </button>
-                                            </form>
-                                        </td>
-                                    @endif
                                 </tr>
                                 @endforeach
+                                @empty
+                                <tr>
+                                    <td class="text-center text-muted py-4">No route-based payroll records found for this period.</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>

@@ -157,55 +157,102 @@ class PayrollController extends Controller
         $schedules = ClientSchedule::where('status', 'completed')
             ->where('staff_id', $staff->id)
             ->whereBetween('start_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
-            ->with(['clientSchedulePayment', 'clientName'])
+            ->with(['clientSchedulePayment', 'clientName.clientRouteStaff.route'])
             ->get();
 
-        $weeks = [];
+        $routePayrollData = [];
+        $weekDateRanges = [];
         $cycleStart = $start_date->copy();
 
         for ($weekNum = 1; $weekNum <= 4; $weekNum++) {
             $weekStart = $cycleStart->copy();
             $weekEnd = $cycleStart->copy()->addDays(6);
-
-            $weeks[$weekNum] = [
+            $weekDateRanges[$weekNum] = [
                 'start' => $weekStart,
                 'end' => $weekEnd,
-                'schedules' => [],
-                'gross_sales' => 0,
-                'commission' => 0,
-                'bonus' => PayrollBonus::where('staff_id', $staff->id)
-                            ->where('year', $selectedYear)
-                            ->where('month_name', $baseMonthName)
-                            ->where('week_number', $weekNum)
-                            ->sum('amount')
             ];
-
             $cycleStart->addDays(7);
         }
 
         foreach ($schedules as $schedule) {
+            $clientRoute = optional($schedule->clientName)->clientRouteStaff->first();
+            $routeId = $clientRoute?->route_id;
+            $routeName = optional($clientRoute?->route)->name ?? 'Unassigned Route';
+
+            if (!$routeId) {
+                continue;
+            }
+
+            if (!isset($routePayrollData[$routeId])) {
+                $routePayrollData[$routeId] = [
+                    'route_id' => $routeId,
+                    'route_name' => $routeName,
+                    'weeks' => [],
+                ];
+                foreach ($weekDateRanges as $weekNum => $range) {
+                    $routePayrollData[$routeId]['weeks'][$weekNum] = [
+                        'start' => $range['start'],
+                        'end' => $range['end'],
+                        'gross_sales' => 0,
+                        'commission' => 0,
+                        'bonus' => 0,
+                        'total_gross_pay' => 0,
+                    ];
+                }
+            }
+
             $scheduleDate = Carbon::parse($schedule->start_date);
-            foreach ($weeks as $wNum => &$week) {
-                if ($scheduleDate->between($week['start'], $week['end'])) {
-                    $price = optional($schedule->clientSchedulePayment)->final_price ?? 0;
-                    $week['gross_sales'] += $price;
-                    $commPerc = $schedule->clientName->commission_percentage ?? 0;
-                    $week['commission'] += ($price * $commPerc) / 100;
-                    $week['schedules'][] = $schedule;
+            $matchedWeek = null;
+            foreach ($weekDateRanges as $weekNum => $range) {
+                if ($scheduleDate->between($range['start'], $range['end'])) {
+                    $matchedWeek = $weekNum;
                     break;
                 }
             }
+
+            if (!$matchedWeek) {
+                continue;
+            }
+
+            $price = optional($schedule->clientSchedulePayment)->final_price ?? 0;
+            $commPerc = $schedule->clientName->commission_percentage ?? 0;
+
+            $routePayrollData[$routeId]['weeks'][$matchedWeek]['gross_sales'] += $price;
+            $routePayrollData[$routeId]['weeks'][$matchedWeek]['commission'] += ($price * $commPerc) / 100;
         }
 
+        $bonusByRouteAndWeek = PayrollBonus::where('staff_id', $staff->id)
+            ->where('year', $selectedYear)
+            ->where('month_name', $baseMonthName)
+            ->whereNotNull('route_id')
+            ->selectRaw('route_id, week_number, SUM(amount) as total_bonus')
+            ->groupBy('route_id', 'week_number')
+            ->get()
+            ->groupBy('route_id');
+
+        foreach ($routePayrollData as $routeId => $routeData) {
+            $routeBonuses = $bonusByRouteAndWeek->get($routeId, collect())->keyBy('week_number');
+
+            foreach ($routePayrollData[$routeId]['weeks'] as $weekNum => $weekData) {
+                $bonus = (float) optional($routeBonuses->get($weekNum))->total_bonus;
+                $routePayrollData[$routeId]['weeks'][$weekNum]['bonus'] = $bonus;
+                $routePayrollData[$routeId]['weeks'][$weekNum]['total_gross_pay'] =
+                    $routePayrollData[$routeId]['weeks'][$weekNum]['commission'] + $bonus;
+            }
+        }
+
+        $routePayrollData = collect($routePayrollData)->sortBy('route_name')->values();
+
         return view('dashboard.payroll.show', compact(
-            'staff', 'weeks', 'selectedMonth', 'months', 'previousMonth', 'nextMonth', 'baseMonthName', 'selectedYear'
+            'staff', 'routePayrollData', 'selectedMonth', 'months', 'previousMonth', 'nextMonth', 'baseMonthName', 'selectedYear'
         ));
     }
 
     public function saveBonus(Request $request, $id)
     {
         $request->validate([
-            'week_number' => 'required',
+            'route_id' => 'required|exists:staff_routes,id',
+            'week_number' => 'required|integer|min:1|max:4',
             'amount' => 'required|numeric',
             'month' => 'required', // Now this is 'baseMonthName'
             'year' => 'required',
@@ -213,6 +260,7 @@ class PayrollController extends Controller
 
         $bonus = PayrollBonus::firstOrNew([
             'staff_id' => $id,
+            'route_id' => $request->route_id,
             'year' => $request->year,
             'month_name' => $request->month,
             'week_number' => $request->week_number,

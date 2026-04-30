@@ -11,6 +11,7 @@ class PayrollBonus extends Model
 
     protected $fillable = [
         'staff_id',
+        'route_id',
         'month_name',
         'year',
         'week_number',
@@ -20,5 +21,10 @@ class PayrollBonus extends Model
     public function staff()
     {
         return $this->belongsTo(User::class, 'staff_id');
+    }
+
+    public function route()
+    {
+        return $this->belongsTo(StaffRoute::class, 'route_id');
     }
 }
