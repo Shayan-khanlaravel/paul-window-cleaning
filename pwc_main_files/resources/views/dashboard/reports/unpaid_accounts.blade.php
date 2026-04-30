@@ -65,35 +65,35 @@
 <section class="create_clients_sec">
     <div class="container-fluid custom_container">
 
-        <div class="row mb-5">
-            <div class="col-md-12">
-                <div class="months-pagination filter_download_dropdown_wrapper" style="display: flex; align-items: center; gap: 10px;">
-                    <a href="{{ request()->fullUrlWithQuery(['month' => $previousMonth]) }}" class="btn btn-sm btn-outline-secondary prevMonthBtn">
-                        <i class="fas fa-arrow-left"></i>
-                    </a>
+{{--        <div class="row mb-5">--}}
+{{--            <div class="col-md-12">--}}
+{{--                <div class="months-pagination filter_download_dropdown_wrapper" style="display: flex; align-items: center; gap: 10px;">--}}
+{{--                    <a href="{{ request()->fullUrlWithQuery(['month' => $previousMonth]) }}" class="btn btn-sm btn-outline-secondary prevMonthBtn">--}}
+{{--                        <i class="fas fa-arrow-left"></i>--}}
+{{--                    </a>--}}
 
-                    <div class="dropdown dropdown_months_wrapper">
-                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-regular fa-calendar"></i>
-                            <span class="selected_month_text">{{ $selectedMonth }}</span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            @foreach ($months as $month)
-                                <li>
-                                    <a class="dropdown-item" href="{{ request()->fullUrlWithQuery(['month' => $month]) }}">
-                                        {{ $month }}
-                                    </a>
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
+{{--                    <div class="dropdown dropdown_months_wrapper">--}}
+{{--                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">--}}
+{{--                            <i class="fa-regular fa-calendar"></i>--}}
+{{--                            <span class="selected_month_text">{{ $selectedMonth }}</span>--}}
+{{--                        </button>--}}
+{{--                        <ul class="dropdown-menu">--}}
+{{--                            @foreach ($months as $month)--}}
+{{--                                <li>--}}
+{{--                                    <a class="dropdown-item" href="{{ request()->fullUrlWithQuery(['month' => $month]) }}">--}}
+{{--                                        {{ $month }}--}}
+{{--                                    </a>--}}
+{{--                                </li>--}}
+{{--                            @endforeach--}}
+{{--                        </ul>--}}
+{{--                    </div>--}}
 
-                    <a href="{{ request()->fullUrlWithQuery(['month' => $nextMonth]) }}" class="btn btn-sm btn-outline-secondary nextMonthBtn">
-                        <i class="fas fa-arrow-right"></i>
-                    </a>
-                </div>
-            </div>
-        </div>
+{{--                    <a href="{{ request()->fullUrlWithQuery(['month' => $nextMonth]) }}" class="btn btn-sm btn-outline-secondary nextMonthBtn">--}}
+{{--                        <i class="fas fa-arrow-right"></i>--}}
+{{--                    </a>--}}
+{{--                </div>--}}
+{{--            </div>--}}
+{{--        </div>--}}
 
         <div class="row">
             <div class="col-md-12">
@@ -112,7 +112,7 @@
                                         <tr class="fw-bolder text-muted">
                                             <th class="min-w-150px">Client</th>
                                             <th class="min-w-100px text-end">Amount</th>
-                                            <th class="min-w-150px">Schedule Date</th>
+{{--                                            <th class="min-w-150px">Schedule Date</th>--}}
                                             <th class="min-w-150px">Date Serviced</th>
                                             <th class="min-w-150px">Route</th>
                                         </tr>
@@ -126,9 +126,9 @@
                                             <td class="text-end">
                                                 <span class="text-dark fw-bold d-block fs-6">${{ number_format(optional($schedule->clientSchedulePayment)->final_price ?? 0, 2) }}</span>
                                             </td>
-                                            <td>
-                                                <span class="text-dark fw-bold d-block fs-6">{{ \Carbon\Carbon::parse($schedule->start_date)->format('m/d/y') }}</span>
-                                            </td>
+{{--                                            <td>--}}
+{{--                                                <span class="text-dark fw-bold d-block fs-6">{{ \Carbon\Carbon::parse($schedule->start_date)->format('m/d/y') }}</span>--}}
+{{--                                            </td>--}}
                                             <td>
                                                 <span class="text-dark fw-bold d-block fs-6">{{ $schedule->service_date }}</span>
                                             </td>

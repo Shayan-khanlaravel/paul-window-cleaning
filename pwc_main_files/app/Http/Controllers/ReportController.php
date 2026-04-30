@@ -109,7 +109,7 @@ class ReportController extends Controller
         $schedules = ClientSchedule::with(['clientSchedulePayment', 'clientName.clientRouteStaff.route', 'StaffName'])
             ->where('status', 'completed')
             ->whereIn('staff_id', $assignedStaffIds)
-            ->whereBetween('start_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
+//            ->whereBetween('start_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
             ->where(function($q) {
                 $q->whereHas('clientSchedulePayment', function ($sub) {
                     $sub->where('status', '!=', 'paid');
