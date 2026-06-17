@@ -40,7 +40,11 @@
 
                     <div class="custom_table">
                         <div class="table-responsive">
-                            <table class="table undeposited-cash-table" id="undeposited_cash_table">
+                            <table
+                                class="table undeposited-cash-table"
+                                id="undeposited_cash_table"
+                                data-grand-total="{{ number_format($totalUndepositedAmount, 2, '.', '') }}"
+                            >
                                 <thead>
                                     <tr>
                                         <th style="width: 40px;">
@@ -206,14 +210,49 @@
             allowClear: true,
         });
 
+        const $undepositedTable = $('#undeposited_cash_table');
+        let undepositedDataTable = null;
+
+        function rowMatchesRouteFilter($row) {
+            const filterRoute = $('#staff_filter_route').val() || '';
+            if (!filterRoute) return true;
+            return String($row.data('route-id') || '') === String(filterRoute);
+        }
+
         function updateStaffTotals() {
             let total = 0;
-            $('#undeposited_cash_table tbody tr:visible').each(function() {
-                const $row = $(this);
-                if ($row.hasClass('no-data-row')) return;
-                total += parseFloat($row.data('amount')) || 0;
-            });
+
+            if (undepositedDataTable) {
+                // Sum all matching rows across every pagination page
+                undepositedDataTable.rows({ search: 'applied' }).every(function() {
+                    const $row = $(this.node());
+                    if ($row.hasClass('no-data-row')) return;
+                    total += parseFloat($row.data('amount')) || 0;
+                });
+            } else {
+                $('#undeposited_cash_table tbody tr').each(function() {
+                    const $row = $(this);
+                    if ($row.hasClass('no-data-row')) return;
+                    if (!rowMatchesRouteFilter($row)) return;
+                    total += parseFloat($row.data('amount')) || 0;
+                });
+            }
+
             $('#staff_total_undeposited_front').text(total.toFixed(2));
+        }
+
+        if (!window.undepositedRouteFilterRegistered) {
+            $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                if (settings.nTable.id !== 'undeposited_cash_table') return true;
+
+                const filterRoute = $('#staff_filter_route').val() || '';
+                if (!filterRoute) return true;
+
+                const api = new $.fn.dataTable.Api(settings);
+                const row = api.row(dataIndex).node();
+                return String($(row).data('route-id') || '') === String(filterRoute);
+            });
+            window.undepositedRouteFilterRegistered = true;
         }
 
         function updateBulkButtonState() {
@@ -257,34 +296,52 @@
         }
 
         $('#staff_filter_route').on('change', function() {
-            const filterRoute = $(this).val() || '';
-
-            $('#undeposited_cash_table tbody tr').each(function() {
-                const $row = $(this);
-                if ($row.hasClass('no-data-row')) return;
-
-                const routeId = String($row.data('route-id') || '');
-                if (!filterRoute || routeId == filterRoute) {
-                    $row.show();
-                } else {
-                    $row.hide();
-                    $row.find('.payment-checkbox').prop('checked', false);
-                }
-            });
+            if (undepositedDataTable) {
+                undepositedDataTable.draw();
+            }
 
             $('#select_all_payments').prop('checked', false);
+            $('.payment-checkbox').prop('checked', false);
             updateStaffTotals();
             updateBulkButtonState();
         });
 
         $('#select_all_payments').on('change', function() {
             const isChecked = $(this).is(':checked');
-            $('#undeposited_cash_table tbody tr:visible .payment-checkbox').prop('checked', isChecked);
+
+            if (undepositedDataTable) {
+                undepositedDataTable.rows({ page: 'current', search: 'applied' }).every(function() {
+                    const $row = $(this.node());
+                    if ($row.hasClass('no-data-row')) return;
+                    if (!rowMatchesRouteFilter($row)) return;
+                    $row.find('.payment-checkbox').prop('checked', isChecked);
+                });
+            } else {
+                $('#undeposited_cash_table tbody tr').each(function() {
+                    const $row = $(this);
+                    if ($row.hasClass('no-data-row') || !rowMatchesRouteFilter($row)) return;
+                    $row.find('.payment-checkbox').prop('checked', isChecked);
+                });
+            }
+
             updateBulkButtonState();
         });
 
         $(document).on('change', '.payment-checkbox', function() {
-            const visibleCheckboxes = $('#undeposited_cash_table tbody tr:visible .payment-checkbox');
+            let visibleCheckboxes;
+            if (undepositedDataTable) {
+                visibleCheckboxes = undepositedDataTable.rows({ page: 'current', search: 'applied' }).nodes().to$()
+                    .filter(function() {
+                        const $row = $(this);
+                        return !$row.hasClass('no-data-row') && rowMatchesRouteFilter($row);
+                    })
+                    .find('.payment-checkbox');
+            } else {
+                visibleCheckboxes = $('#undeposited_cash_table tbody tr').filter(function() {
+                    return !$(this).hasClass('no-data-row') && rowMatchesRouteFilter($(this));
+                }).find('.payment-checkbox');
+            }
+
             const allChecked = visibleCheckboxes.length > 0 && visibleCheckboxes.filter(':checked').length === visibleCheckboxes.length;
             $('#select_all_payments').prop('checked', allChecked);
             updateBulkButtonState();
@@ -329,9 +386,6 @@
             });
         });
 
-        const $undepositedTable = $('#undeposited_cash_table');
-        let undepositedDataTable = null;
-
         if ($undepositedTable.length && !$undepositedTable.find('tbody tr.no-data-row').length) {
             undepositedDataTable = $undepositedTable.DataTable({
                 searching: true,
@@ -340,7 +394,6 @@
                 info: true,
                 ordering: false,
                 drawCallback: function() {
-                    updateStaffTotals();
                     updateBulkButtonState();
                 },
             });
@@ -348,10 +401,12 @@
             $(document).on('input', '.custom_search_box', function() {
                 if (undepositedDataTable) {
                     undepositedDataTable.search($(this).val()).draw();
+                    updateStaffTotals();
                 }
             });
         }
 
+        // Always show sum of all records (all pages), not just the current page
         updateStaffTotals();
         updateBulkButtonState();
     });
