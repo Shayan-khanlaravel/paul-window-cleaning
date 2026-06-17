@@ -3531,10 +3531,9 @@ class WebsiteController extends Controller
             'start_time' => $request->start_time ?? null,
             'end_time' => $request->end_time ?? null,
             'staff_id' => auth()->user()->id,
-            'status' => $request->payment_type == "cash" ? 'paid' : 'pending',
+            'status' => ($request->payment_type == "cash" && $request->option != 'no_payment') ? 'paid' : 'pending',
         ]);
-        //       return $value;
-        // return auth()->user()->id;
+
         $reorded = ClientSchedule::where('id', $request->schedule_id)->update([
             'status' => 'completed',
             'service_date' => $request->service_date ?? null,

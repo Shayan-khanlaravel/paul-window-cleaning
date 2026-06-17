@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\ClientPayment;
 use App\Models\ClientSchedule;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -123,12 +124,12 @@ class ReportController extends Controller
         ])
             ->where('client_schedules.status', 'completed')
             ->whereHas('clientName', function ($q) {
-                $q->where('payment_type', 'invoice');
+                $q->where('payment_type', 'cash');
             })
             ->whereIn('client_schedules.staff_id', $assignedStaffIds)
             ->where(function($q) {
                 $q->whereHas('clientSchedulePayment', function ($sub) {
-                    $sub->where('status', '!=', 'paid');
+                    $sub->where('status', 'pending');
                 })->orWhereDoesntHave('clientSchedulePayment');
             })
             ->join('clients', 'client_schedules.client_id', '=', 'clients.id')
@@ -152,5 +153,42 @@ class ReportController extends Controller
         return view('dashboard.reports.unpaid_accounts', compact(
             'groupedData', 'months', 'selectedMonth', 'previousMonth', 'nextMonth'
         ));
+    }
+
+    public function markPaymentPaid(Request $request)
+    {
+        $request->validate([
+            'payment_id' => 'required|exists:client_payments,id',
+            'payment_date' => 'required|date',
+        ]);
+
+        $payment = ClientPayment::with('clientSchedule')->findOrFail($request->payment_id);
+
+        if ($payment->status === 'paid') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment is already marked as paid.',
+            ], 422);
+        }
+
+        if (Auth::user()->hasRole('staff')) {
+            $scheduleStaffId = $payment->clientSchedule?->staff_id;
+            if ($scheduleStaffId != Auth::id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to update this payment.',
+                ], 403);
+            }
+        }
+
+        $payment->update([
+            'status' => 'paid',
+            'payment_date' => $request->payment_date,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment marked as paid successfully.',
+        ]);
     }
 }

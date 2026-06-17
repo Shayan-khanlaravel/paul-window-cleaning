@@ -52,6 +52,14 @@
     .dropdown_months_wrapper .btn i {
         color: #00ADEE;
     }
+
+    .payment-date-input {
+        min-width: 150px;
+    }
+
+    .mark-paid-btn {
+        white-space: nowrap;
+    }
 </style>
 @endpush
 
@@ -115,6 +123,8 @@
 {{--                                            <th class="min-w-150px">Schedule Date</th>--}}
                                             <th class="min-w-150px">Date Serviced</th>
                                             <th class="min-w-150px">Route</th>
+                                            <th class="min-w-175px">Payment Date</th>
+                                            <th class="min-w-100px text-end">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -135,6 +145,29 @@
                                             <td>
                                                 <span class="text-dark fw-bold d-block fs-6">{{ $schedule->route_name }}</span>
                                             </td>
+                                            <td>
+                                                @if(optional($schedule->clientSchedulePayment)->id)
+                                                    <input
+                                                        type="date"
+                                                        class="form-control form-control-sm payment-date-input"
+                                                        value="{{ now()->format('Y-m-d') }}"
+                                                        data-payment-id="{{ $schedule->clientSchedulePayment->id }}"
+                                                    >
+                                                @else
+                                                    <span class="text-muted fs-7">No payment record</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-end">
+                                                @if(optional($schedule->clientSchedulePayment)->id)
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-sm btn-primary mark-paid-btn"
+                                                        data-payment-id="{{ $schedule->clientSchedulePayment->id }}"
+                                                    >
+                                                        Save
+                                                    </button>
+                                                @endif
+                                            </td>
                                         </tr>
                                         @endforeach
                                         <tr class="bg-light">
@@ -142,7 +175,7 @@
                                             <td class="text-end fw-bolder fs-5 text-danger">
                                                 ${{ number_format($schedules->sum(fn($s) => optional($s->clientSchedulePayment)->final_price ?? 0), 2) }}
                                             </td>
-                                            <td colspan="2"></td>
+                                            <td colspan="4"></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -163,3 +196,58 @@
     </div>
 </section>
 @endsection
+
+@push('js')
+<script>
+    $(document).ready(function() {
+        $(document).on('click', '.mark-paid-btn', function() {
+            const button = $(this);
+            const paymentId = button.data('payment-id');
+            const row = button.closest('tr');
+            const dateInput = row.find('.payment-date-input[data-payment-id="' + paymentId + '"]');
+            const paymentDate = dateInput.val();
+
+            if (!paymentDate) {
+                Swal.fire({
+                    title: 'Payment date required',
+                    text: 'Please select the date you received payment.',
+                    icon: 'warning',
+                });
+                return;
+            }
+
+            button.prop('disabled', true);
+
+            $.ajax({
+                url: '{{ route('reports.unpaid.mark-paid') }}',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    payment_id: paymentId,
+                    payment_date: paymentDate,
+                },
+                success: function(response) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: response.message,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false,
+                    }).then(function() {
+                        window.location.reload();
+                    });
+                },
+                error: function(xhr) {
+                    const message = xhr.responseJSON?.message || 'Failed to update payment. Please try again.';
+                    Swal.fire({
+                        title: 'Error!',
+                        text: message,
+                        icon: 'error',
+                    });
+                    button.prop('disabled', false);
+                },
+            });
+        });
+    });
+</script>
+@endpush
