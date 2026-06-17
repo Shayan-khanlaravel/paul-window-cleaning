@@ -1,16 +1,30 @@
 <section class="client_management staff_manag complete_jobs_section">
     <div class="container-fluid custom_container">
+        @php
+            $totalUndepositedAmount = collect($cashPayments ?? [])->sum(fn($payment) => (float) ($payment->final_price ?? 0));
+        @endphp
         <div class="row">
             <div class="col-md-12">
                 <div class="custom_div">
-                    <div class="custom_justify_between">
-                        <h3>Total Undeposited Cash</h3>
+                    <div class="undeposited-page-header">
+                        <div class="undeposited-page-header__left">
+                            <h3>Total Undeposited Cash</h3>
+                            <div class="undeposited-total-badge">
+                                <div class="undeposited-total-badge__icon">
+                                    <i class="fa-solid fa-sack-dollar"></i>
+                                </div>
+                                <div class="undeposited-total-badge__content">
+                                    <span class="undeposited-total-badge__label">Total Amount</span>
+                                    <span class="undeposited-total-badge__amount">$<span id="staff_total_undeposited_front">{{ number_format($totalUndepositedAmount, 2) }}</span></span>
+                                </div>
+                            </div>
+                        </div>
                         <button type="button" class="btn_global btn_blue" id="mark_selected_deposited" disabled>
                             Mark Selected as Deposited<i class="fa-solid fa-check"></i>
                         </button>
                     </div>
 
-                    <div class="row mb-3" style="margin-top: 15px;">
+                    <div class="row mb-3 undeposited-filter-row">
                         <div class="col-md-4">
                             <div class="txt_field custom_select_route">
                                 <label for="staff_filter_route">Filter by Route</label>
@@ -86,17 +100,103 @@
                             </table>
                         </div>
                     </div>
-
-                    <div class="row mt-3" id="staff_totals" style="background-color: #f8f9fa; padding: 15px; border-radius: 5px;">
-                        <div class="col-md-12 text-end">
-                            <strong>Total Undeposited: $<span id="staff_total_undeposited">0.00</span></strong>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
+
+@push('css')
+<style>
+    .undeposited-page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+    .undeposited-page-header__left {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .undeposited-page-header h3 {
+        margin: 0;
+        white-space: nowrap;
+    }
+
+    .undeposited-total-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #e8f7fd 0%, #cceffc 100%);
+        border: 1px solid rgba(0, 173, 238, 0.2);
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(0, 173, 238, 0.12);
+    }
+
+    .undeposited-total-badge__icon {
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #00ADEE;
+        border-radius: 10px;
+        color: #fff;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    .undeposited-total-badge__content {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .undeposited-total-badge__label {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: #5a6a7a;
+    }
+
+    .undeposited-total-badge__amount {
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1.1;
+        color: #32346A;
+        font-family: 'Hellix-SemiBold', sans-serif;
+    }
+
+    .undeposited-filter-row {
+        margin-top: 0 !important;
+    }
+
+    @media (max-width: 767px) {
+        .undeposited-page-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .undeposited-page-header__left {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .undeposited-page-header .btn_global {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+@endpush
 
 @push('js')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -113,7 +213,7 @@
                 if ($row.hasClass('no-data-row')) return;
                 total += parseFloat($row.data('amount')) || 0;
             });
-            $('#staff_total_undeposited').text(total.toFixed(2));
+            $('#staff_total_undeposited_front').text(total.toFixed(2));
         }
 
         function updateBulkButtonState() {
