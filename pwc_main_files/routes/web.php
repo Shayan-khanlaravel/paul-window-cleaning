@@ -148,6 +148,7 @@ Route::group(['middleware' => ['auth']], function () {
     Route::get("deposits/get-expected-cash", [\App\Http\Controllers\DepositsController::class, 'getExpectedCash'])->name('deposits.get-expected-cash');
     Route::get("deposits/{id}/get-data", [\App\Http\Controllers\DepositsController::class, 'getDepositData'])->name('deposits.get-data');
     Route::post("deposits/{id}/update-status", [\App\Http\Controllers\DepositsController::class, 'updateStatus'])->name('deposits.update-status');
+    Route::post("deposits/mark-deposited", [\App\Http\Controllers\DepositsController::class, 'markDeposited'])->name('deposits.mark-deposited');
     Route::resource("deposits", "\App\Http\Controllers\DepositsController");
     Route::resource("clients", "\App\Http\Controllers\ClientsController");
     Route::post('timelogs/{id}/end', ["\App\Http\Controllers\TimelogController", 'endTime'])->name('timelogs.end');

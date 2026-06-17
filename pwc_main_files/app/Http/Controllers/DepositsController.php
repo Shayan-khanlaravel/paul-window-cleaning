@@ -15,38 +15,8 @@ class DepositsController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Deposit::with(['route', 'staff']);
-
-            // Filter by staff_id for staff users (not admin)
             $user = Auth::user();
-            if ($user && !$user->hasRole('admin')) {
-                // Filter deposits to only show those created by this staff user
-                $query->where('staff_id', $user->id);
-            }
 
-            // Filter by route
-            if ($request->filled('route_id')) {
-                $query->where('route_id', $request->route_id);
-            }
-
-            // Filter by month
-            if ($request->filled('month')) {
-                $query->where('month', $request->month);
-            }
-
-            // Filter by year
-            if ($request->filled('year')) {
-                $query->where('year', $request->year);
-            }
-
-            // Filter by deposit status
-            if ($request->filled('is_deposit')) {
-                $query->where('is_deposit', $request->is_deposit);
-            }
-
-            $deposits = $query->orderBy('created_at', 'desc')->paginate(20);
-
-            // Get routes - for staff, only show their assigned routes; for admin, show all
             if ($user && !$user->hasRole('admin')) {
                 $assignedRouteIds = AssignRoute::where('staff_id', $user->id)
                     ->pluck('route_id')
@@ -54,9 +24,32 @@ class DepositsController extends Controller
                 $routes = StaffRoute::where('status', 1)
                     ->whereIn('id', $assignedRouteIds)
                     ->get();
-            } else {
-                $routes = StaffRoute::where('status', 1)->get();
+
+                $cashPayments = $this->getUndepositedCashPayments($user->id, $request, $assignedRouteIds);
+
+                return view('dashboard.deposits', compact('cashPayments', 'routes'));
             }
+
+            $query = Deposit::with(['route', 'staff']);
+
+            if ($request->filled('route_id')) {
+                $query->where('route_id', $request->route_id);
+            }
+
+            if ($request->filled('month')) {
+                $query->where('month', $request->month);
+            }
+
+            if ($request->filled('year')) {
+                $query->where('year', $request->year);
+            }
+
+            if ($request->filled('is_deposit')) {
+                $query->where('is_deposit', $request->is_deposit);
+            }
+
+            $deposits = $query->orderBy('created_at', 'desc')->paginate(20);
+            $routes = StaffRoute::where('status', 1)->get();
 
             return view('dashboard.deposits', compact('deposits', 'routes'));
         } catch (\Exception $e) {
@@ -724,6 +717,87 @@ class DepositsController extends Controller
                 'type' => 'error'
             ]);
         }
+    }
+
+    private function getUndepositedCashPayments($staffId, Request $request, array $assignedRouteIds)
+    {
+        $query = ClientPayment::with([
+            'clientSchedule.clientName.clientRouteStaff.route',
+            'client.clientRouteStaff.route',
+        ])
+            ->where('payment_type', 'cash')
+            ->where('status', 'paid')
+            ->where('staff_id', $staffId)
+            ->where(function ($q) {
+                $q->whereNull('payment_status')
+                    ->orWhere('payment_status', 'payment')
+                    ->orWhere('payment_status', 'pending');
+            });
+
+        if ($request->filled('route_id')) {
+            $routeId = $request->route_id;
+            $query->whereHas('client.clientRouteStaff', function ($q) use ($routeId) {
+                $q->where('route_id', $routeId);
+            });
+        }
+
+        return $query->orderByDesc('created_at')->get()->map(function ($payment) use ($assignedRouteIds) {
+            $routeAssignment = $payment->client?->clientRouteStaff
+                ?->first(fn($cr) => in_array($cr->route_id, $assignedRouteIds));
+
+            $payment->route_name = $routeAssignment?->route?->name ?? 'N/A';
+            $payment->route_id_display = $routeAssignment?->route_id;
+
+            return $payment;
+        });
+    }
+
+    /**
+     * Mark undeposited cash client payments as deposited (payment_status = paid).
+     */
+    public function markDeposited(Request $request)
+    {
+        $request->validate([
+            'payment_ids' => 'required|array|min:1',
+            'payment_ids.*' => 'required|exists:client_payments,id',
+        ]);
+
+        $user = Auth::user();
+        $payments = ClientPayment::whereIn('id', $request->payment_ids)->get();
+
+        foreach ($payments as $payment) {
+            if ($payment->payment_type !== 'cash' || $payment->status !== 'paid') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only paid cash payments can be marked as deposited.',
+                ], 422);
+            }
+
+            if ($payment->payment_status === 'paid') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'One or more payments are already marked as deposited.',
+                ], 422);
+            }
+
+            if ($user->hasRole('staff') && $payment->staff_id != $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You are not authorized to update one or more payments.',
+                ], 403);
+            }
+        }
+
+        ClientPayment::whereIn('id', $request->payment_ids)->update([
+            'payment_status' => 'paid',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => count($request->payment_ids) === 1
+                ? 'Payment marked as deposited successfully.'
+                : count($request->payment_ids) . ' payments marked as deposited successfully.',
+        ]);
     }
 
     /**

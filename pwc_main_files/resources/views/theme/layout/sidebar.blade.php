@@ -264,7 +264,7 @@
                                         class="nav_list @if (request()->is('deposits')) active @endif"
                                         aria-current="page">
                                         <div class="sidebar_icon"><i class="fa-solid fa-wallet"></i></div>
-                                        Deposits
+                                        Total Undeposited Cash
                                     </a>
                                 </div>
                             </div>
@@ -274,7 +274,7 @@
                                         class="nav_list @if (request()->is('payroll*')) active @endif"
                                         aria-current="page">
                                         <div class="sidebar_icon"><i class="fa-solid fa-money-bill-wave"></i></div>
-                                        Payroll
+                                        My Payroll Worksheet
                                     </a>
                                 </div>
                             </div>
