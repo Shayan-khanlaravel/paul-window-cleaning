@@ -74,9 +74,9 @@
                                             <th>End Time</th>
                                             <th>Total Hours</th>
                                             <th>Notes</th>
-                                            @if (!$isAdmin)
-                                                <th>Action</th>
-                                            @endif
+{{--                                            @if (!$isAdmin)--}}
+{{--                                                <th>Action</th>--}}
+{{--                                            @endif--}}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -86,7 +86,7 @@
                                                     <td>{{ $timelog->staff->name ?? 'N/A' }}</td>
                                                 @endif
                                                 <td>{{ $timelog->route->name ?? 'N/A' }}</td>
-                                                <td> {{ \Carbon\Carbon::parse($timelog->service_date)->format('d-m-Y') }}
+                                                <td> {{ \Carbon\Carbon::parse($timelog->service_date)->format('m-d-Y') }}
                                                 </td>
                                                 <td><span
                                                         class="badge bg-primary">{{ \Carbon\Carbon::parse($timelog->start_time)->format('h:i A') }}
@@ -115,26 +115,26 @@
                                                     @endif
                                                 </td>
                                                 <td>{{ Str::limit($timelog->notes, 30) ?? '-' }}</td>
-                                                @if (!$isAdmin)
-                                                    <td>
-                                                        <div class="dropdown">
-                                                            <button class="dropdown-toggle" type="button"
-                                                                id="dropdownMenuButton{{ $timelog->id }}"
-                                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                                <i class="fa-solid fa-ellipsis"></i>
-                                                            </button>
-                                                            <ul class="dropdown-menu"
-                                                                aria-labelledby="dropdownMenuButton{{ $timelog->id }}">
-                                                                <li>
-                                                                    <a class="dropdown-item" href="javascript:void(0)"
-                                                                        onclick="deleteTimeLog('{{ route('timelogs.destroy', $timelog->id) }}')">
-                                                                        Delete
-                                                                    </a>
-                                                                </li>
-                                                            </ul>
-                                                        </div>
-                                                    </td>
-                                                @endif
+{{--                                                @if (!$isAdmin)--}}
+{{--                                                    <td>--}}
+{{--                                                        <div class="dropdown">--}}
+{{--                                                            <button class="dropdown-toggle" type="button"--}}
+{{--                                                                id="dropdownMenuButton{{ $timelog->id }}"--}}
+{{--                                                                data-bs-toggle="dropdown" aria-expanded="false">--}}
+{{--                                                                <i class="fa-solid fa-ellipsis"></i>--}}
+{{--                                                            </button>--}}
+{{--                                                            <ul class="dropdown-menu"--}}
+{{--                                                                aria-labelledby="dropdownMenuButton{{ $timelog->id }}">--}}
+{{--                                                                <li>--}}
+{{--                                                                    <a class="dropdown-item" href="javascript:void(0)"--}}
+{{--                                                                        onclick="deleteTimeLog('{{ route('timelogs.destroy', $timelog->id) }}')">--}}
+{{--                                                                        Delete--}}
+{{--                                                                    </a>--}}
+{{--                                                                </li>--}}
+{{--                                                            </ul>--}}
+{{--                                                        </div>--}}
+{{--                                                    </td>--}}
+{{--                                                @endif--}}
                                             </tr>
                                         @empty
                                             <tr>
@@ -174,11 +174,30 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="txt_field">
+                        <div class="row">
+                            <div class="txt_field mt-2">
+                                <label>Service Date</label>
+                                <input type="date"
+                                       name="service_date"
+                                       class="form-control"
+                                       max="{{ date('Y-m-d') }}"
+                                       required>
+                            </div>
+
+                            <div class="txt_field mt-2">
+                                <label>Start Time</label>
+                                <input type="time" name="start_time" class="form-control" required>
+                            </div>
+
+                            <div class="txt_field mt-2">
+                                <label>End Time</label>
+                                <input type="time" name="end_time" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="txt_field  mt-2" >
                             <label for="notes">Notes (Optional)</label>
                             <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                         </div>
-                        <input type="hidden" name="start_time" id="currentTime">
                     </div>
                     <div class="modal-footer custom_justify_between">
                         <button type="button" class="btn_global btn_grey" data-bs-dismiss="modal" aria-label="Close">Cancel
@@ -349,4 +368,38 @@
             });
         }
     </script>
+
+    <script>
+        $(function () {
+
+            $('#add_timelog form').submit(function (e) {
+
+                let serviceDate = $('input[name="service_date"]').val();
+                let startTime = $('input[name="start_time"]').val();
+                let endTime = $('input[name="end_time"]').val();
+
+                let today = new Date().toISOString().split('T')[0];
+                if (serviceDate > today) {
+
+                    alert('Future date is not allowed');
+
+                    e.preventDefault();
+
+                    return false;
+                }
+                if (endTime <= startTime) {
+
+                    alert('End time must be greater than start time');
+
+                    e.preventDefault();
+
+                    return false;
+                }
+
+            });
+
+        });
+    </script>
+
+
 @endpush

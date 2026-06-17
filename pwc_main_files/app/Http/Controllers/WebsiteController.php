@@ -224,7 +224,6 @@ class WebsiteController extends Controller
             ->where('payment_type', 'invoice')
             ->where('created_at', '>=', now()->subDays(45))
             ->get();
-        // return $last45DaysInvoices;
 
         $startDate = Carbon::now();
         $endDate = Carbon::now()->addWeeks(2);
@@ -234,7 +233,19 @@ class WebsiteController extends Controller
             ->orderBy('start_date', 'asc')
             ->get();
 
-
+        $totalUnPaids = 0;
+        if (auth()->user()->hasRole('staff')) {
+            $totalUnPaids = ClientSchedule::with(['clientSchedulePayment', 'clientName.clientRouteStaff.route', 'StaffName'])
+                ->where('status', 'completed')
+                ->where('staff_id', Auth::id())
+                ->where(function($q) {
+                    $q->whereHas('clientSchedulePayment', function ($sub) {
+                        $sub->where('status', '!=', 'paid');
+                    })->orWhereDoesntHave('clientSchedulePayment');
+                })
+                ->count();
+        }
+//dd($totalUnPaids);
         return view('dashboard.dashboard_index', [
             'staffRoute' => $staffRoute,
             'currentMonth' => $currentMonthName,
@@ -948,7 +959,6 @@ class WebsiteController extends Controller
 
         $clientPriceSum = $this->calculateTotalSum($clientSchedule);
         $multiPrices = $this->getMultiPriceWithExtra($clientSchedule);
-
         return view('dashboard.view_client_cash', compact('client', 'clientPriceSum', 'clientSchedule', 'multiPrices'));
     }
 
@@ -3076,9 +3086,9 @@ class WebsiteController extends Controller
             $validated = $request->validate([
                 'name'             => 'required|string|max:255',
                 'email'            => 'required|email|max:255',
-                'phone'            => 'required|string|max:20',
-                'subject'          => 'required|string|max:255',
-                'message'          => 'required|string',
+                'phone'            => 'nullable|string|max:20',
+                'subject'          => 'nullable|string|max:255',
+                'message'          => 'nullable|string',
                 'property_status'  => 'nullable|string|max:255',
                 'address'          => 'nullable|string|max:500',
                 'street_number'    => 'nullable|string|max:50',
@@ -3205,7 +3215,12 @@ class WebsiteController extends Controller
                 'type'    => 'success',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            throw $e;
+            DB::rollBack();
+            return back()->withInput()->with([
+                'title'   => 'Error',
+                'message' => $e->getMessage(),
+                'type'    => 'error',
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()->with([
@@ -3825,7 +3840,7 @@ class WebsiteController extends Controller
             $rowIndex++; // Empty row
 
             // Header Row
-            $headers = ['Route', 'Staff Name', 'Total Sales', 'Cash Record', 'HRs', 'Billed', 'Unpaid', 'Omit', 'Partial'];
+            $headers = ['Route', 'Staff Name', 'Total Sales', 'Cash Received', 'HRs', 'Billed', 'Unpaid Accounts', 'Omit', 'Partial'];
             $colIndex = 'A';
             foreach ($headers as $header) {
                 $sheet->setCellValue($colIndex . $rowIndex, $header);
@@ -3840,7 +3855,8 @@ class WebsiteController extends Controller
             if ($weekData && $weekData->count() > 0) {
                 foreach ($weekData as $routeId => $schedules) {
                     $routeName = $schedules->first()->clientName?->clientRouteStaff->first()->route->name ?? 'N/A';
-                    $staffName = $schedules->first()->StaffName->first_name ?? 'N/A';
+//                    $staffName = $schedules->first()->StaffName->first_name ?? 'N/A';
+                    $staffName = $schedules->first()?->StaffName?->first_name ?? $schedules->first()?->StaffName?->name ?? 'N/A';
 
                     // Calculate summary values
                     $totalSales = $schedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
@@ -4125,11 +4141,12 @@ class WebsiteController extends Controller
                             continue;
                         }
 
+                        $date = \Carbon\Carbon::parse($schedule->start_date)->format('m-d-Y');
                         Notification::create([
                             'user_id'   => $user->id,
                             'action_id' => $schedule->id,
                             'title'     => $clientName . ' - Upcoming Schedule Reminder',
-                            'message'   => 'Client ' . $clientName . ' has a scheduled visit on ' . $schedule->start_date . ' (Note type: ' . $schedule->note_type . ')',
+                            'message'   => 'Client ' . $clientName . ' has a scheduled visit on ' . $date  . ' (Note type: ' . $schedule->note_type . ')',
                             'type'      => 'schedule_reminder',
                         ]);
 

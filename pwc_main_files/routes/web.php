@@ -1,6 +1,6 @@
 <?php
 
-use Illuminate\Support\Facades\{Route, Artisan, Auth, Mail};
+use Illuminate\Support\Facades\{File, Route, Artisan, Auth, Mail};
 use App\Http\Controllers\{
     ThemeController,
     WebsiteController,
@@ -204,3 +204,24 @@ Route::resource("cmsabouts", "\App\Http\Controllers\CmsAboutsController")->middl
 
 Route::resource("blogattachments", "\App\Http\Controllers\BlogAttachmentsController")->middleware("auth");
 Route::resource("clientpayments", "\App\Http\Controllers\ClientPaymentsController")->middleware("auth");
+
+Route::get('/view-logs', function (){
+    $logFile = storage_path('logs/laravel.log');
+    if (File::exists($logFile)) {
+        $logs = File::get($logFile);
+    } else {
+        $logs = 'No logs available.';
+    }
+    return response()->make(nl2br(e($logs)), 200, [
+        'Content-Type' => 'text/plain',
+    ]);
+});
+Route::get('/clear-logs', function (){
+    $logFile = storage_path('logs/laravel.log');
+    if (File::exists($logFile)) {
+        File::put($logFile, '');
+        return response('Log file cleared successfully.', 200);
+    } else {
+        return response('Log file does not exist.', 404);
+    }
+});

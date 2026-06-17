@@ -463,7 +463,15 @@ class StaffRoutesController extends Controller
 
     public function exportSchedule($id, Request $request)
     {
-        $staffRoute = StaffRoute::with('clientRoute.clientSchedule.clientSchedulePrice.clientPaymentPrice')->findOrFail($id);
+        $staffRoute = StaffRoute::with([
+            'clientRoute' => function ($query) {
+                $query->whereHas('clients', function ($q) {
+                    $q->where('status', 1);
+                })->with([
+                    'clientSchedule.clientSchedulePrice.clientPaymentPrice'
+                ]);
+            }
+        ])->findOrFail($id);
 
         $currentYear = now()->year;
         $currentMonth = now()->format('F');
@@ -611,22 +619,38 @@ class StaffRoutesController extends Controller
                         $servicesString = collect($servicesArray)
                             ->map(fn($s) => ($s['name'] ?? '') . ($s['value'] ? ' ($' . $s['value'] . ')' : ''))
                             ->filter()
-                            ->implode(', ');
+//                            ->implode(', ');
+                            ->implode("\n");
                     }
 
+//                    return [
+//                        'Client Name' => optional($firstSchedule->clientName)->name ?? 'N/A',
+//                        'Pay'         => ucfirst(strtolower(optional($firstSchedule->clientName)->payment_type ?? 'N/A')),
+//                        'Amount'      => $amount,
+//                        'Service'     => $servicesString,
+//                        'Address'     => trim(
+//                            (optional($firstSchedule->clientName)->house_no ?? '') . ' ' .
+//                                (optional($firstSchedule->clientName)->address  ?? '') . ' ' .
+//                                (optional($firstSchedule->clientName)->state    ?? '') . ' ' .
+//                        ),
+//                        'City'        => optional($firstSchedule->clientName)->city    ?? 'N/A',
+//                        'Note'        => $displayNote,
+//                        'position'    => optional($firstSchedule->clientName)->position,
+//                    ];
                     return [
                         'Client Name' => optional($firstSchedule->clientName)->name ?? 'N/A',
-                        'Pay'         => ucfirst(strtolower(optional($firstSchedule->clientName)->payment_type ?? 'N/A')),
+                        'Cash'        => ucfirst(strtolower(optional($firstSchedule->clientName)->payment_type ?? 'N/A')),
                         'Amount'      => $amount,
-                        'Service'     => $servicesString,
+                        'Service'       => $servicesString,
                         'Address'     => trim(
                             (optional($firstSchedule->clientName)->house_no ?? '') . ' ' .
-                                (optional($firstSchedule->clientName)->address  ?? '') . ' ' .
-                                (optional($firstSchedule->clientName)->state    ?? '') . ' ' .
-                                (optional($firstSchedule->clientName)->postal   ?? '')
+                            (optional($firstSchedule->clientName)->address ?? '') . ' ' .
+                            (optional($firstSchedule->clientName)->state ?? '')
                         ),
-                        'City'        => optional($firstSchedule->clientName)->city    ?? 'N/A',
+
+                        'City'        => optional($firstSchedule->clientName)->city ?? 'N/A',
                         'Note'        => $displayNote,
+                        'Billed'      => $amount,
                         'position'    => optional($firstSchedule->clientName)->position,
                     ];
                 })->values();

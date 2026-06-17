@@ -130,7 +130,7 @@
 {{--                                                <span class="text-dark fw-bold d-block fs-6">{{ \Carbon\Carbon::parse($schedule->start_date)->format('m/d/y') }}</span>--}}
 {{--                                            </td>--}}
                                             <td>
-                                                <span class="text-dark fw-bold d-block fs-6">{{ $schedule->service_date }}</span>
+                                                <span class="text-dark fw-bold d-block fs-6">{{ \Carbon\Carbon::parse($schedule->service_date)->format('m-d-Y') }}</span>
                                             </td>
                                             <td>
                                                 <span class="text-dark fw-bold d-block fs-6">{{ $schedule->route_name }}</span>

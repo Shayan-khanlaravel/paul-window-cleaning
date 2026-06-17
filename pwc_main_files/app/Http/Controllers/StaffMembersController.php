@@ -73,7 +73,7 @@ class StaffMembersController extends Controller
             'user_id' => $user->id,
             'pic' => $safeName,
             'address' => $validatedData['address'],
-            'hiring_date' => $validatedData['hiring_date'],
+            'hiring_date' => \Carbon\Carbon::parse($validatedData['hiring_date'])->toDateString(),
             'plain_password' => $validatedData['password'],
         ]);
 
@@ -176,7 +176,7 @@ class StaffMembersController extends Controller
         if ($profile) {
             $profile->address = $validatedData['address'];
             // Convert d/m/Y format to Y-m-d for database
-            $hiringDate = \Carbon\Carbon::createFromFormat('d/m/Y', $validatedData['hiring_date'])->format('Y-m-d');
+            $hiringDate = \Carbon\Carbon::createFromFormat('d/m/Y', $validatedData['hiring_date'])->format('m-d-y');
             $profile->hiring_date = $hiringDate;
 
             if ($request->filled('password')) {

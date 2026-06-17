@@ -106,15 +106,34 @@ class ReportController extends Controller
             $assignedStaffIds = $assignedStaffIds->filter(fn($id) => $id == Auth::id());
         }
 
-        $schedules = ClientSchedule::with(['clientSchedulePayment', 'clientName.clientRouteStaff.route', 'StaffName'])
-            ->where('status', 'completed')
-            ->whereIn('staff_id', $assignedStaffIds)
-//            ->whereBetween('start_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
+//        $schedules = ClientSchedule::with(['clientSchedulePayment', 'clientName.clientRouteStaff.route', 'StaffName'])
+//            ->where('status', 'completed')
+//            ->whereIn('staff_id', $assignedStaffIds)
+////            ->whereBetween('start_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
+//            ->where(function($q) {
+//                $q->whereHas('clientSchedulePayment', function ($sub) {
+//                    $sub->where('status', '!=', 'paid');
+//                })->orWhereDoesntHave('clientSchedulePayment');
+//            })
+//            ->get();
+        $schedules = ClientSchedule::with([
+            'clientSchedulePayment',
+            'clientName.clientRouteStaff.route',
+            'StaffName'
+        ])
+            ->where('client_schedules.status', 'completed')
+            ->whereHas('clientName', function ($q) {
+                $q->where('payment_type', 'invoice');
+            })
+            ->whereIn('client_schedules.staff_id', $assignedStaffIds)
             ->where(function($q) {
                 $q->whereHas('clientSchedulePayment', function ($sub) {
                     $sub->where('status', '!=', 'paid');
                 })->orWhereDoesntHave('clientSchedulePayment');
             })
+            ->join('clients', 'client_schedules.client_id', '=', 'clients.id')
+            ->orderBy('clients.name', 'asc')
+            ->select('client_schedules.*')
             ->get();
 
         // Attach route name via client's assigned route
@@ -128,6 +147,7 @@ class ReportController extends Controller
                 ?? optional($item->StaffName)->name
                 ?? 'Unknown Staff';
         });
+        $groupedData = $groupedData->sortKeys();
 
         return view('dashboard.reports.unpaid_accounts', compact(
             'groupedData', 'months', 'selectedMonth', 'previousMonth', 'nextMonth'

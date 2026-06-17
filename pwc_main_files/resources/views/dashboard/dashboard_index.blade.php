@@ -107,8 +107,8 @@
                                 <div class="date_range_picker_wrapper">
                                     <label class="form-label"><i class="fa-regular fa-calendar"></i></label>
                                     <input class="form-control form-control-solid" placeholder="Pick date rage" id="kt_daterangepicker_1" />
-                                    </div>
                                 </div>
+                            </div>
                             <div class="chart_wrapper">
                                 <canvas id="line-chart"></canvas>
                                 <svg style="display: none;">
@@ -128,6 +128,7 @@
                                     </defs>
                                 </svg>
                             </div>
+
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -246,7 +247,6 @@
         <section class="homePage_section">
             <div class="container-fluid custom_container">
                 <div class="row">
-
                     <div class="col-md-8">
                         <div class="row  custom_row height_100_percent">
                             <div class="col-md-12">
@@ -353,6 +353,30 @@
                                                                         </a>
                                                                     </div>
                                                                 </div> -->
+                            <div class="col-md-12">
+                                <div class="customer_payroll_sheets shadow_box_wrapper">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="payroll_cards shadow_box_wrapper">
+                                                <h3>Total Undeposited Cash</h3>
+                                                <h4>5,000</h4>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="payroll_cards shadow_box_wrapper">
+                                                <h3>My Payroll WorkSheet</h3>
+                                                <h4>5,000</h4>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="payroll_cards shadow_box_wrapper">
+                                                <h3>{{ auth()->user()->hasRole('staff') ? 'Unpaid Accounts' : 'Unpaid Customers' }}</h3>
+                                                <h4>0 - 69</h4>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="col-md-12">
                                 <div class="custom_div custom_div_deposit">
                                     <div class="custom_justify_between">

@@ -115,6 +115,7 @@
                                 </div>
                             </div>
                             <div class="sectionToPrint staff_routes_week_row">
+
                                 @foreach ($mergedSchedules as $key => $schedule)
                                     @php
                                         $cashTotal = 0;
@@ -1673,7 +1674,7 @@
                     },
                     success: function(response) {
                         exportData = response;
-
+                        console.log("exportData" , exportData);
                         if (exportData.length === 0) {
                             Swal.fire({
                                 icon: "warning",
@@ -1697,11 +1698,21 @@
                                 let weeklyCashTotal = 0;
                                 let weeklyInvoiceTotal = 0;
 
+                                // weekData.routes.forEach(route => {
+                                //     if (route.Pay.toLowerCase() === 'cash') {
+                                //         weeklyCashTotal += parseFloat(route.Amount);
+                                //     } else if (route.Pay.toLowerCase() === 'invoice') {
+                                //         weeklyInvoiceTotal += parseFloat(route.Amount);
+                                //     }
+                                // });
                                 weekData.routes.forEach(route => {
-                                    if (route.Pay.toLowerCase() === 'cash') {
-                                        weeklyCashTotal += parseFloat(route.Amount);
-                                    } else if (route.Pay.toLowerCase() === 'invoice') {
-                                        weeklyInvoiceTotal += parseFloat(route.Amount);
+
+                                    const payType = (route.Pay || route.Cash || '').toString().toLowerCase();
+
+                                    if (payType === 'cash') {
+                                        weeklyCashTotal += parseFloat(route.Amount || 0);
+                                    } else if (payType === 'invoice') {
+                                        weeklyInvoiceTotal += parseFloat(route.Amount || 0);
                                     }
                                 });
 
@@ -1737,8 +1748,8 @@
                                     "Name",
                                     "Address",
                                     "City",
-                                    "C",
-                                    "I",
+                                    "Cash",
+                                    "Billed",
                                     "Scope",
                                     "Note / Time",
                                 ]);
@@ -1747,12 +1758,14 @@
                                 let dataRowStart = formattedData.length;
 
                                 weekData.routes.forEach(route => {
+                                    const payType = (route.Pay || route.Cash || '').toString().toLowerCase();
+
                                     formattedData.push([
                                         route["Client Name"],
                                         route.Address,
                                         route.City,
-                                        route.Pay === 'Cash' ? `$${parseFloat(route.Amount).toFixed(2)}` : "$0.00",
-                                        route.Pay === 'Invoice' ? `$${parseFloat(route.Amount).toFixed(2)}` : "$0.00",
+                                        payType === 'cash' ? `$${parseFloat(route.Amount).toFixed(2)}` : "$0.00",
+                                        payType === 'invoice' ? `$${parseFloat(route.Amount).toFixed(2)}` : "$0.00",
                                         route.Service,
                                         route.Note + (route.Time ? `${route.Time}` : ""),
                                     ]);
@@ -1791,7 +1804,16 @@
                         let ws = XLSX.utils.aoa_to_sheet(formattedData);
 
                         // ── Column Widths ────────────────────────────────────
-                        const colWidths = [20, 20, 16, 7, 7, 35, 35];
+                        // const colWidths = [20, 20, 16, 7, 7, 35, 35];
+                        const colWidths = [
+                            20,
+                            14,
+                            10,
+                            10,
+                            10,
+                            45,
+                            35
+                        ];
                         ws['!cols'] = colWidths.map(width => ({
                             wch: width
                         }));

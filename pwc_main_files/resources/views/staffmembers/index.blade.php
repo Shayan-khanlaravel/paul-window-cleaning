@@ -47,7 +47,7 @@
                                                 </div>
                                                 {{$staffmember->name??''}}</td>
                                             <td>{{$staffmember->email??''}}</td>
-                                           <td>{{ $staffmember->profile?->hiring_date }}</td>
+                                           <td>{{ \Carbon\Carbon::parse($staffmember->profile?->hiring_date)->format('m/d/Y') }}</td>
                                             {{-- <td>{{ \Carbon\Carbon::createFromFormat('d/m/Y', $staffmember->profile?->hiring_date)->format('m-d-y') ?? '' }}</td> --}}
 
                                             <td>{{$staffmember->staff_jobs_count??''}}</td>
