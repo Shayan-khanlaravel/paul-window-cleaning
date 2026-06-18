@@ -30,7 +30,7 @@ class DepositsController extends Controller
                 return view('dashboard.deposits', compact('cashPayments', 'routes'));
             }
 
-            $query = Deposit::with(['route', 'staff']);
+            $query = Deposit::with(['route', 'staff', 'clientSchedule.clientName']);
 
             if ($request->filled('route_id')) {
                 $query->where('route_id', $request->route_id);
@@ -721,6 +721,9 @@ class DepositsController extends Controller
 
     private function getUndepositedCashPayments($staffId, Request $request, array $assignedRouteIds)
     {
+        $depositedScheduleIds = Deposit::whereNotNull('schedule_id')->pluck('schedule_id');
+        $depositedPaymentIds = Deposit::whereNotNull('client_payment_id')->pluck('client_payment_id');
+
         $query = ClientPayment::with([
             'clientSchedule.clientName.clientRouteStaff.route',
             'client.clientRouteStaff.route',
@@ -732,6 +735,15 @@ class DepositsController extends Controller
                 $q->whereNull('payment_status')
                     ->orWhere('payment_status', 'payment')
                     ->orWhere('payment_status', 'pending');
+            })
+            ->when($depositedScheduleIds->isNotEmpty(), function ($q) use ($depositedScheduleIds) {
+                $q->where(function ($sub) use ($depositedScheduleIds) {
+                    $sub->whereNull('schedule_id')
+                        ->orWhereNotIn('schedule_id', $depositedScheduleIds);
+                });
+            })
+            ->when($depositedPaymentIds->isNotEmpty(), function ($q) use ($depositedPaymentIds) {
+                $q->whereNotIn('id', $depositedPaymentIds);
             });
 
         if ($request->filled('route_id')) {
@@ -753,7 +765,8 @@ class DepositsController extends Controller
     }
 
     /**
-     * Mark undeposited cash client payments as deposited (payment_status = paid).
+     * Mark undeposited cash client payments as deposited (payment_status = paid)
+     * and create a deposit record linked to the schedule.
      */
     public function markDeposited(Request $request)
     {
@@ -763,7 +776,17 @@ class DepositsController extends Controller
         ]);
 
         $user = Auth::user();
-        $payments = ClientPayment::whereIn('id', $request->payment_ids)->get();
+        $payments = ClientPayment::with([
+            'clientSchedule',
+            'client.clientRouteStaff',
+        ])->whereIn('id', $request->payment_ids)->get();
+
+        if ($payments->count() !== count($request->payment_ids)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'One or more payments could not be found.',
+            ], 404);
+        }
 
         foreach ($payments as $payment) {
             if ($payment->payment_type !== 'cash' || $payment->status !== 'paid') {
@@ -786,10 +809,44 @@ class DepositsController extends Controller
                     'message' => 'You are not authorized to update one or more payments.',
                 ], 403);
             }
+
+            if ($payment->schedule_id && Deposit::where('schedule_id', $payment->schedule_id)->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A deposit record already exists for one or more selected schedules.',
+                ], 422);
+            }
+
+            if (Deposit::where('client_payment_id', $payment->id)->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A deposit record already exists for one or more selected payments.',
+                ], 422);
+            }
         }
 
-        ClientPayment::whereIn('id', $request->payment_ids)->update([
-            'payment_status' => 'paid',
+        try {
+            DB::transaction(function () use ($payments, $user) {
+                foreach ($payments as $payment) {
+                    $payment->update(['payment_status' => 'paid']);
+                    $this->createDepositFromPayment($payment, $user);
+                }
+            });
+        } catch (\Exception $e) {
+            Log::error('Error marking payments as deposited: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to mark payments as deposited: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        Notification::create([
+            'user_id' => 2,
+            'action_id' => 2,
+            'title' => ($user->name ?? 'Staff') . ' submitted cash deposit(s)',
+            'message' => count($request->payment_ids) . ' cash payment(s) marked for deposit review.',
+            'type' => 'new_deposit',
         ]);
 
         return response()->json([
@@ -797,6 +854,53 @@ class DepositsController extends Controller
             'message' => count($request->payment_ids) === 1
                 ? 'Payment marked as deposited successfully.'
                 : count($request->payment_ids) . ' payments marked as deposited successfully.',
+        ]);
+    }
+
+    private function createDepositFromPayment(ClientPayment $payment, $user): Deposit
+    {
+        $schedule = $payment->clientSchedule;
+        $routeId = $payment->client?->clientRouteStaff?->first()?->route_id;
+
+        if (!$routeId) {
+            throw new \RuntimeException('Unable to determine route for payment #' . $payment->id);
+        }
+
+        if (!$payment->schedule_id) {
+            throw new \RuntimeException('Payment #' . $payment->id . ' is not linked to a schedule.');
+        }
+
+        $referenceDate = $schedule?->service_date
+            ?? $schedule?->start_date
+            ?? $payment->payment_date
+            ?? now();
+
+        $referenceDate = Carbon::parse($referenceDate);
+
+        $week = $schedule?->week;
+        if ($week === null || $week === '') {
+            $week = 'week0';
+        } elseif (is_numeric($week)) {
+            $week = 'week' . $week;
+        } elseif (!str_starts_with((string) $week, 'week')) {
+            $week = 'week' . preg_replace('/[^0-9]/', '', (string) $week);
+        }
+
+        $month = $schedule?->month ?: $referenceDate->format('F');
+        $amount = (float) ($payment->final_price ?? 0);
+
+        return Deposit::create([
+            'route_id' => $routeId,
+            'staff_id' => $payment->staff_id ?? $user->id,
+            'schedule_id' => $payment->schedule_id,
+            'client_payment_id' => $payment->id,
+            'week' => $week,
+            'month' => $month,
+            'year' => (int) $referenceDate->format('Y'),
+            'total_amount' => $amount,
+            'deposit_amount' => $amount,
+            'is_deposit' => false,
+            'deposit_date' => now(),
         ]);
     }
 

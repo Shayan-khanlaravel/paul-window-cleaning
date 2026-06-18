@@ -81,6 +81,7 @@
                                             <tr>
                                                 <th>Route</th>
                                                 <th>Staff</th>
+                                                <th>Client</th>
                                                 <th>Week</th>
                                                 <th>Month</th>
                                                 <th>Year</th>
@@ -93,6 +94,7 @@
                                                 <tr data-route-id="{{ $deposit->route_id }}" data-route-name="{{ $deposit->route->name ?? 'N/A' }}" data-week="{{ $deposit->week }}" data-month="{{ $deposit->month }}" data-year="{{ $deposit->year }}" data-total-amount="{{ $deposit->total_amount }}" data-deposit-amount="{{ $deposit->deposit_amount }}">
                                                     <td>{{ $deposit->route->name ?? 'N/A' }}</td>
                                                     <td>{{ $deposit->staff->name ?? 'N/A' }}</td>
+                                                    <td>{{ $deposit->clientSchedule?->clientName?->name ?? 'N/A' }}</td>
                                                     <td>Week {{ (int) str_replace('week', '', $deposit->week) + 1 }}</td>
                                                     <td>{{ $deposit->month }}</td>
                                                     <td>{{ $deposit->year }}</td>

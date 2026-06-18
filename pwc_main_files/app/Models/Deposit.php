@@ -13,6 +13,8 @@ class Deposit extends Model
     protected $fillable = [
         'route_id',
         'staff_id',
+        'schedule_id',
+        'client_payment_id',
         'week',
         'month',
         'year',
@@ -44,6 +46,16 @@ class Deposit extends Model
     public function staff()
     {
         return $this->belongsTo(User::class, 'staff_id');
+    }
+
+    public function clientSchedule()
+    {
+        return $this->belongsTo(ClientSchedule::class, 'schedule_id');
+    }
+
+    public function clientPayment()
+    {
+        return $this->belongsTo(ClientPayment::class, 'client_payment_id');
     }
 }
 
