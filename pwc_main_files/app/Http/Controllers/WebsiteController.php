@@ -3528,7 +3528,7 @@ class WebsiteController extends Controller
             'final_price' => $request->final_price ?? null,
             'day_number' => $request->day_number ?? null,
             'payment_type' => $request->payment_type ?? null,
-            'payment_date' => ($request->payment_type == "cash" && $request->option != 'no_payment') ? now()->format('m/d/Y')  : null,
+            'payment_date' => ($request->payment_type == "cash" && $request->option != 'no_payment') ? now()->format('Y-m-d')  : null,
             'start_time' => $request->start_time ?? null,
             'end_time' => $request->end_time ?? null,
             'staff_id' => auth()->user()->id,

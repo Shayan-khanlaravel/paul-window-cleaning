@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use File;
 use DB;
 use Hash;
+use Illuminate\Validation\Rule;
 
 class StaffMembersController extends Controller
 {
@@ -46,10 +47,10 @@ class StaffMembersController extends Controller
             'email' => [
                 'required',
                 'email',
-                'unique:users,email',
+                Rule::unique('users')->withoutTrashed(),
             ],
-            'address' => 'required|string|max:500',
-            'hiring_date' => 'required',
+            'address' => 'nullable|string|max:500',
+            'hiring_date' => 'nullable',
             'password' => [
                 'required',
                 'string',
@@ -73,7 +74,7 @@ class StaffMembersController extends Controller
             'user_id' => $user->id,
             'pic' => $safeName,
             'address' => $validatedData['address'],
-            'hiring_date' => \Carbon\Carbon::parse($validatedData['hiring_date'])->toDateString(),
+            'hiring_date' => isset($validatedData['hiring_date']) ? \Carbon\Carbon::createFromFormat('d/m/Y', $validatedData['hiring_date'])->format('m-d-y') : null,
             'plain_password' => $validatedData['password'],
         ]);
 
@@ -152,8 +153,8 @@ class StaffMembersController extends Controller
 
         $rules = [
             'name' => 'required|string|max:255',
-            'address' => 'required|string|max:500',
-            'hiring_date' => 'required',
+            'address' => 'nullable|string|max:500',
+            'hiring_date' => 'nullable',
         ];
 
         if ($request->filled('password')) {
@@ -176,7 +177,7 @@ class StaffMembersController extends Controller
         if ($profile) {
             $profile->address = $validatedData['address'];
             // Convert d/m/Y format to Y-m-d for database
-            $hiringDate = \Carbon\Carbon::createFromFormat('d/m/Y', $validatedData['hiring_date'])->format('m-d-y');
+            $hiringDate = isset($validatedData['hiring_date']) ? \Carbon\Carbon::createFromFormat('d/m/Y', $validatedData['hiring_date'])->format('m-d-y') : $profile->hiring_date;
             $profile->hiring_date = $hiringDate;
 
             if ($request->filled('password')) {

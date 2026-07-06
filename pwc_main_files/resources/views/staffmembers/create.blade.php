@@ -311,13 +311,6 @@
                         required: true,
                         email: true,
                     },
-                    address: {
-                        required: true
-                    },
-                    hiring_date: {
-                        required: true
-                        // pastDate: true
-                    },
                     password: {
                         required: true,
                         strongPassword: true
@@ -334,13 +327,6 @@
                     email: {
                         required: "Please enter your email address.",
                         email: "Please enter a valid email address."
-                    },
-                    address: {
-                        required: "Please enter your address."
-                    },
-                    hiring_date: {
-                        required: "Please enter your date of hiring."
-                        // date: "Please enter a valid date."
                     },
                     password: {
                         required: "Please provide a password.",
