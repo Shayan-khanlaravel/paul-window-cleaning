@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\ClientSchedule;
 use App\Models\PayrollBonus;
+use App\Support\PayrollPeriod;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
@@ -13,97 +14,51 @@ use App\Mail\WeeklyPayrollMail;
 
 class PayrollController extends Controller
 {
-    private function getCalendarData($selectedMonthStr)
+    /**
+     * Resolve the selected semi-monthly period and everything the views need.
+     *
+     * Replaces the old custom 4-week "January - February" calendar with two fixed
+     * brackets per month (1st-15th, 16th-last day). The request param is `period`
+     * and carries a compact key like "2026-01-1"; `month` is still accepted as a
+     * fallback so old bookmarked/emailed links do not 500.
+     */
+    private function getPeriodData(?string $selectedPeriodKey): array
     {
-        $currentDate = now();
-        $selectedYear = $currentDate->year;
+        ['year' => $year, 'month' => $month, 'half' => $half] =
+            PayrollPeriod::parse($selectedPeriodKey);
 
-        if ($selectedMonthStr) {
-            preg_match('/\d{4}/', $selectedMonthStr, $yearMatch);
-            $selectedYear = $yearMatch[0] ?? $selectedYear;
-        }
-
-        $firstMondayOfYear = Carbon::parse("first Monday of January $selectedYear");
-
-        $customStartDates = [
-            "January - February" => $firstMondayOfYear->copy()->addDays(0),
-            "February - March" => $firstMondayOfYear->copy()->addWeeks(4),
-            "March" => $firstMondayOfYear->copy()->addWeeks(8),
-            "March - April" => $firstMondayOfYear->copy()->addWeeks(12),
-            "April - May" => $firstMondayOfYear->copy()->addWeeks(16),
-            "May - June" => $firstMondayOfYear->copy()->addWeeks(20),
-            "June - July" => $firstMondayOfYear->copy()->addWeeks(24),
-            "July - August" => $firstMondayOfYear->copy()->addWeeks(28),
-            "August - September" => $firstMondayOfYear->copy()->addWeeks(32),
-            "September - October" => $firstMondayOfYear->copy()->addWeeks(36),
-            "October - November" => $firstMondayOfYear->copy()->addWeeks(40),
-            "November - December" => $firstMondayOfYear->copy()->addWeeks(44),
-            "December - January" => $firstMondayOfYear->copy()->addWeeks(48),
-        ];
-
-        if ($selectedMonthStr) {
-            $baseMonthName = trim(str_replace($selectedYear, '', $selectedMonthStr));
-            if (!array_key_exists($baseMonthName, $customStartDates)) {
-                $baseMonthName = "January - February";
-            }
-        } else {
-            $baseMonthName = "January - February";
-            foreach ($customStartDates as $range => $startDate) {
-                if ($currentDate->gte($startDate) && $currentDate->lt($startDate->copy()->addWeeks(4))) {
-                    $baseMonthName = $range;
-                    break;
-                }
-            }
-        }
-
-        $selectedMonth = "$baseMonthName $selectedYear";
-        $monthStartDate = $customStartDates[$baseMonthName];
-        $monthEndDate = $monthStartDate->copy()->addWeeks(4)->subDay();
-
-        $monthNames = array_keys($customStartDates);
-        $months = [];
-        foreach ($monthNames as $monthName) {
-            $months[] = $monthName . ' ' . $selectedYear;
-        }
-
-        $currentIndex = array_search($baseMonthName, $monthNames);
-        if ($currentIndex === false) {
-            $currentIndex = 0;
-        }
-        if ($currentIndex > 0) {
-            $previousMonthName = $monthNames[$currentIndex - 1];
-            $previousMonth = $previousMonthName . ' ' . $selectedYear;
-        } else {
-            $previousMonthName = $monthNames[count($monthNames) - 1];
-            $previousMonth = $previousMonthName . ' ' . ($selectedYear - 1);
-        }
-        if ($currentIndex < count($monthNames) - 1) {
-            $nextMonthName = $monthNames[$currentIndex + 1];
-            $nextMonth = $nextMonthName . ' ' . $selectedYear;
-        } else {
-            $nextMonthName = $monthNames[0];
-            $nextMonth = $nextMonthName . ' ' . ($selectedYear + 1);
-        }
+        [$startDate, $endDate] = PayrollPeriod::range($year, $month, $half);
 
         return [
-            'baseMonthName' => $baseMonthName,
-            'selectedYear' => $selectedYear,
-            'selectedMonth' => $selectedMonth,
-            'start_date' => $monthStartDate,
-            'end_date' => $monthEndDate,
-            'months' => $months,
-            'previousMonth' => $previousMonth,
-            'nextMonth' => $nextMonth,
+            'year'                => $year,
+            'month'               => $month,
+            'half'                => $half,
+            'monthName'           => PayrollPeriod::monthName($year, $month),
+            'start_date'          => $startDate,
+            'end_date'            => $endDate,
+            'selectedPeriod'      => PayrollPeriod::key($year, $month, $half),
+            'selectedPeriodLabel' => PayrollPeriod::label($year, $month, $half),
+            'periods'             => PayrollPeriod::forYear($year),
+            'previousPeriod'      => PayrollPeriod::previousKey($year, $month, $half),
+            'nextPeriod'          => PayrollPeriod::nextKey($year, $month, $half),
         ];
+    }
+
+    /**
+     * Accept either the new `period` key or the legacy `month` param.
+     */
+    private function resolvePeriodKey(Request $request): ?string
+    {
+        return $request->input('period', $request->input('month'));
     }
 
     public function index(Request $request)
     {
-        $cal = $this->getCalendarData($request->input('month'));
+        $cal = $this->getPeriodData($this->resolvePeriodKey($request));
         extract($cal);
 
         $staffs = User::role('staff')->get();
-        if (Auth::user()->hasRole('staff')){
+        if (Auth::user()->hasRole('staff')) {
             $staffs = $staffs->where('id', Auth::id());
         }
 
@@ -126,24 +81,25 @@ class PayrollController extends Controller
             }
 
             $bonus = PayrollBonus::where('staff_id', $staff->id)
-                ->where('year', $selectedYear)
-                ->where('month_name', $baseMonthName)
+                ->where('year', $year)
+                ->where('month_name', $monthName)
+                ->where('week_number', $half) // week_number column now stores the half (1 or 2)
                 ->sum('amount');
 
             $totalGross = $commission + $bonus;
 
             $staffData[] = (object) [
-                'id' => $staff->id,
-                'name' => $staff->name,
+                'id'          => $staff->id,
+                'name'        => $staff->name,
                 'gross_sales' => $grossSales,
-                'commission' => $commission,
-                'bonus' => $bonus,
-                'total_gross' => $totalGross
+                'commission'  => $commission,
+                'bonus'       => $bonus,
+                'total_gross' => $totalGross,
             ];
         }
 
         return view('dashboard.payroll.index', compact(
-            'staffData', 'months', 'selectedMonth', 'previousMonth', 'nextMonth'
+            'staffData', 'periods', 'selectedPeriod', 'selectedPeriodLabel', 'previousPeriod', 'nextPeriod'
         ));
     }
 
@@ -151,7 +107,7 @@ class PayrollController extends Controller
     {
         $staff = User::findOrFail($id);
 
-        $cal = $this->getCalendarData($request->input('month'));
+        $cal = $this->getPeriodData($this->resolvePeriodKey($request));
         extract($cal);
 
         $schedules = ClientSchedule::where('status', 'completed')
@@ -160,24 +116,14 @@ class PayrollController extends Controller
             ->with(['clientSchedulePayment', 'clientName.clientRouteStaff.route'])
             ->get();
 
+        // One semi-monthly bracket = the currently selected period.
+        // Aggregate completed schedules per route within that single bracket.
         $routePayrollData = [];
-        $weekDateRanges = [];
-        $cycleStart = $start_date->copy();
-
-        for ($weekNum = 1; $weekNum <= 4; $weekNum++) {
-            $weekStart = $cycleStart->copy();
-            $weekEnd = $cycleStart->copy()->addDays(6);
-            $weekDateRanges[$weekNum] = [
-                'start' => $weekStart,
-                'end' => $weekEnd,
-            ];
-            $cycleStart->addDays(7);
-        }
 
         foreach ($schedules as $schedule) {
             $clientRoute = optional($schedule->clientName)->clientRouteStaff->first();
-            $routeId = $clientRoute?->route_id;
-            $routeName = optional($clientRoute?->route)->name ?? 'Unassigned Route';
+            $routeId     = $clientRoute?->route_id;
+            $routeName   = optional($clientRoute?->route)->name ?? 'Unassigned Route';
 
             if (!$routeId) {
                 continue;
@@ -185,85 +131,67 @@ class PayrollController extends Controller
 
             if (!isset($routePayrollData[$routeId])) {
                 $routePayrollData[$routeId] = [
-                    'route_id' => $routeId,
-                    'route_name' => $routeName,
-                    'weeks' => [],
+                    'route_id'        => $routeId,
+                    'route_name'      => $routeName,
+                    'start'           => $start_date,
+                    'end'             => $end_date,
+                    'gross_sales'     => 0,
+                    'commission'      => 0,
+                    'bonus'           => 0,
+                    'total_gross_pay' => 0,
                 ];
-                foreach ($weekDateRanges as $weekNum => $range) {
-                    $routePayrollData[$routeId]['weeks'][$weekNum] = [
-                        'start' => $range['start'],
-                        'end' => $range['end'],
-                        'gross_sales' => 0,
-                        'commission' => 0,
-                        'bonus' => 0,
-                        'total_gross_pay' => 0,
-                    ];
-                }
             }
 
-            $scheduleDate = Carbon::parse($schedule->start_date);
-            $matchedWeek = null;
-            foreach ($weekDateRanges as $weekNum => $range) {
-                if ($scheduleDate->between($range['start'], $range['end'])) {
-                    $matchedWeek = $weekNum;
-                    break;
-                }
-            }
-
-            if (!$matchedWeek) {
-                continue;
-            }
-
-            $price = optional($schedule->clientSchedulePayment)->final_price ?? 0;
+            $price    = optional($schedule->clientSchedulePayment)->final_price ?? 0;
             $commPerc = $schedule->clientName->commission_percentage ?? 0;
 
-            $routePayrollData[$routeId]['weeks'][$matchedWeek]['gross_sales'] += $price;
-            $routePayrollData[$routeId]['weeks'][$matchedWeek]['commission'] += ($price * $commPerc) / 100;
+            $routePayrollData[$routeId]['gross_sales'] += $price;
+            $routePayrollData[$routeId]['commission']  += ($price * $commPerc) / 100;
         }
 
-        $bonusByRouteAndWeek = PayrollBonus::where('staff_id', $staff->id)
-            ->where('year', $selectedYear)
-            ->where('month_name', $baseMonthName)
+        // Bonuses for this staff + period, grouped by route.
+        $bonusByRoute = PayrollBonus::where('staff_id', $staff->id)
+            ->where('year', $year)
+            ->where('month_name', $monthName)
+            ->where('week_number', $half) // half (1 or 2)
             ->whereNotNull('route_id')
-            ->selectRaw('route_id, week_number, SUM(amount) as total_bonus')
-            ->groupBy('route_id', 'week_number')
-            ->get()
-            ->groupBy('route_id');
+            ->selectRaw('route_id, SUM(amount) as total_bonus')
+            ->groupBy('route_id')
+            ->pluck('total_bonus', 'route_id');
 
         foreach ($routePayrollData as $routeId => $routeData) {
-            $routeBonuses = $bonusByRouteAndWeek->get($routeId, collect())->keyBy('week_number');
-
-            foreach ($routePayrollData[$routeId]['weeks'] as $weekNum => $weekData) {
-                $bonus = (float) optional($routeBonuses->get($weekNum))->total_bonus;
-                $routePayrollData[$routeId]['weeks'][$weekNum]['bonus'] = $bonus;
-                $routePayrollData[$routeId]['weeks'][$weekNum]['total_gross_pay'] =
-                    $routePayrollData[$routeId]['weeks'][$weekNum]['commission'] + $bonus;
-            }
+            $bonus = (float) ($bonusByRoute[$routeId] ?? 0);
+            $routePayrollData[$routeId]['bonus']           = $bonus;
+            $routePayrollData[$routeId]['total_gross_pay'] = $routePayrollData[$routeId]['commission'] + $bonus;
         }
 
         $routePayrollData = collect($routePayrollData)->sortBy('route_name')->values();
 
         return view('dashboard.payroll.show', compact(
-            'staff', 'routePayrollData', 'selectedMonth', 'months', 'previousMonth', 'nextMonth', 'baseMonthName', 'selectedYear'
+            'staff', 'routePayrollData', 'selectedPeriod', 'selectedPeriodLabel',
+            'periods', 'previousPeriod', 'nextPeriod', 'monthName', 'half', 'year'
         ));
     }
 
     public function saveBonus(Request $request, $id)
     {
+        // Bonuses are admin-only. Staff can view amounts but cannot add/edit them.
+        abort_unless(Auth::user()->hasRole('admin'), 403);
+
         $request->validate([
             'route_id' => 'required|exists:staff_routes,id',
-            'week_number' => 'required|integer|min:1|max:4',
-            'amount' => 'required|numeric',
-            'month' => 'required', // Now this is 'baseMonthName'
-            'year' => 'required',
+            'half'     => 'required|integer|min:1|max:2', // 1 = 1st-15th, 2 = 16th-EOM
+            'amount'   => 'required|numeric',
+            'month'    => 'required', // month name, e.g. "January"
+            'year'     => 'required|integer',
         ]);
 
         $bonus = PayrollBonus::firstOrNew([
-            'staff_id' => $id,
-            'route_id' => $request->route_id,
-            'year' => $request->year,
-            'month_name' => $request->month,
-            'week_number' => $request->week_number,
+            'staff_id'    => $id,
+            'route_id'    => $request->route_id,
+            'year'        => $request->year,
+            'month_name'  => $request->month,
+            'week_number' => $request->half, // column reused to store the half
         ]);
 
         $bonus->amount = $request->amount;
@@ -275,14 +203,12 @@ class PayrollController extends Controller
     public function sendEmail(Request $request, $id)
     {
         $request->validate([
-            'week_number' => 'required',
-            'month' => 'required'
+            'period' => 'required',
         ]);
 
         $staff = User::findOrFail($id);
-        $weekNum = $request->week_number;
 
-        $cal = $this->getCalendarData($request->month);
+        $cal = $this->getPeriodData($request->input('period'));
         extract($cal);
 
         $schedules = ClientSchedule::where('status', 'completed')
@@ -291,55 +217,37 @@ class PayrollController extends Controller
             ->with(['clientSchedulePayment', 'clientName'])
             ->get();
 
-        $cycleStart = $start_date->copy();
-        $targetWeekStart = null;
-        $targetWeekEnd = null;
-
-        for ($w = 1; $w <= 4; $w++) {
-            $weekStart = $cycleStart->copy();
-            $weekEnd = $cycleStart->copy()->addDays(6);
-            if ($w == $weekNum) {
-                $targetWeekStart = $weekStart;
-                $targetWeekEnd = $weekEnd;
-                break;
-            }
-            $cycleStart->addDays(7);
-        }
-
         $grossSales = 0;
         $commission = 0;
 
         foreach ($schedules as $schedule) {
-            $scheduleDate = Carbon::parse($schedule->start_date);
-            if ($scheduleDate->between($targetWeekStart, $targetWeekEnd)) {
-                $price = optional($schedule->clientSchedulePayment)->final_price ?? 0;
-                $grossSales += $price;
-                $commPerc = $schedule->clientName->commission_percentage ?? 0;
-                $commission += ($price * $commPerc) / 100;
-            }
+            $price = optional($schedule->clientSchedulePayment)->final_price ?? 0;
+            $grossSales += $price;
+            $commPerc = $schedule->clientName->commission_percentage ?? 0;
+            $commission += ($price * $commPerc) / 100;
         }
 
         $bonus = PayrollBonus::where('staff_id', $staff->id)
-            ->where('year', $selectedYear)
-            ->where('month_name', $baseMonthName)
-            ->where('week_number', $weekNum)
+            ->where('year', $year)
+            ->where('month_name', $monthName)
+            ->where('week_number', $half)
             ->sum('amount');
 
         $totalGrossPay = $commission + $bonus;
 
         $data = [
-            'staff_name' => $staff->name,
-            'week_number' => $weekNum,
-            'date_range' => $targetWeekStart->format('M d') . ' - ' . $targetWeekEnd->format('M d'),
-            'gross_sales' => $grossSales,
-            'commission' => $commission,
-            'bonus' => $bonus,
+            'staff_name'      => $staff->name,
+            'period_label'    => $selectedPeriodLabel,
+            'date_range'      => $start_date->format('M d') . ' - ' . $end_date->format('M d'),
+            'gross_sales'     => $grossSales,
+            'commission'      => $commission,
+            'bonus'           => $bonus,
             'total_gross_pay' => $totalGrossPay,
         ];
 
         $accountantEmail = env('ACCOUNTANT_EMAIL', 'cleaning@yopmail.com');
         Mail::to($accountantEmail)->send(new WeeklyPayrollMail($data));
 
-        return back()->with('message', "Payroll details for Week {$weekNum} emailed to accountant successfully!");
+        return back()->with('message', "Payroll details for {$selectedPeriodLabel} emailed to accountant successfully!");
     }
 }

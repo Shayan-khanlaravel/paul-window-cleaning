@@ -3537,7 +3537,7 @@ class WebsiteController extends Controller
 
         $reorded = ClientSchedule::where('id', $request->schedule_id)->update([
             'status' => 'completed',
-            'service_date' => $request->service_date ?? null,
+            'service_date' => $request->service_date ?? now()->format('Y-m-d'),
             'staff_id' => auth()->user()->id,
         ]);
 

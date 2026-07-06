@@ -13,27 +13,27 @@
         <div class="row mb-5">
             <div class="col-md-12">
                 <div class="months-pagination filter_download_dropdown_wrapper" style="display: flex; align-items: center; gap: 10px;">
-                    <a href="{{ request()->fullUrlWithQuery(['month' => $previousMonth]) }}" type="button" class="btn btn-sm btn-outline-secondary prevMonthBtn">
+                    <a href="{{ request()->fullUrlWithQuery(['period' => $previousPeriod]) }}" type="button" class="btn btn-sm btn-outline-secondary prevMonthBtn">
                         <i class="fas fa-arrow-left"></i>
                     </a>
 
                     <div class="dropdown dropdown_months_wrapper">
                         <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fa-regular fa-calendar"></i>
-                            <span class="selected_month_text">{{ $selectedMonth }}</span>
+                            <span class="selected_month_text">{{ $selectedPeriodLabel }}</span>
                         </button>
                         <ul class="dropdown-menu">
-                            @foreach ($months as $month)
+                            @foreach ($periods as $period)
                                 <li>
-                                    <a class="dropdown-item" href="{{ request()->fullUrlWithQuery(['month' => $month]) }}">
-                                        {{ $month }}
+                                    <a class="dropdown-item {{ $period['value'] === $selectedPeriod ? 'active' : '' }}" href="{{ request()->fullUrlWithQuery(['period' => $period['value']]) }}">
+                                        {{ $period['label'] }}
                                     </a>
                                 </li>
                             @endforeach
                         </ul>
                     </div>
 
-                    <a href="{{ request()->fullUrlWithQuery(['month' => $nextMonth]) }}" class="btn btn-sm btn-outline-secondary nextMonthBtn" type="button">
+                    <a href="{{ request()->fullUrlWithQuery(['period' => $nextPeriod]) }}" class="btn btn-sm btn-outline-secondary nextMonthBtn" type="button">
                         <i class="fas fa-arrow-right"></i>
                     </a>
                 </div>
@@ -61,7 +61,7 @@
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="d-flex justify-content-start flex-column">
-                                                <a href="{{ route('payroll.show', $staff->id) }}?month={{ urlencode($selectedMonth) }}" class="text-dark fw-bold text-hover-primary mb-1 fs-6">
+                                                <a href="{{ route('payroll.show', $staff->id) }}?period={{ urlencode($selectedPeriod) }}" class="text-dark fw-bold text-hover-primary mb-1 fs-6">
                                                     {{ $staff->name }}
                                                 </a>
                                             </div>
@@ -80,7 +80,7 @@
                                         <span class="text-dark fw-bold d-block fs-7 text-end">${{ number_format($staff->total_gross, 2) }}</span>
                                     </td>
                                     <td>
-                                        <a href="{{ route('payroll.show', $staff->id) }}?month={{ urlencode($selectedMonth) }}" class="btn btn-sm btn-primary">View Details</a>
+                                        <a href="{{ route('payroll.show', $staff->id) }}?period={{ urlencode($selectedPeriod) }}" class="btn btn-sm btn-primary">View Details</a>
                                     </td>
                                 </tr>
                                 @endforeach

@@ -29,7 +29,8 @@ class WeeklyPayrollMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Weekly Payroll Mail - ' . $this->data['staff_name'],
+            subject: 'Semi-Monthly Payroll - ' . $this->data['staff_name']
+                . ' (' . ($this->data['period_label'] ?? '') . ')',
         );
     }
 
