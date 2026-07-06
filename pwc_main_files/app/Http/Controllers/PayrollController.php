@@ -66,7 +66,7 @@ class PayrollController extends Controller
         foreach ($staffs as $staff) {
             $schedules = ClientSchedule::where('status', 'completed')
                 ->where('staff_id', $staff->id)
-                ->whereBetween('start_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
+                ->whereBetween('service_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
                 ->with(['clientSchedulePayment', 'clientName'])
                 ->get();
 
@@ -112,7 +112,7 @@ class PayrollController extends Controller
 
         $schedules = ClientSchedule::where('status', 'completed')
             ->where('staff_id', $staff->id)
-            ->whereBetween('start_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
+            ->whereBetween('service_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
             ->with(['clientSchedulePayment', 'clientName.clientRouteStaff.route'])
             ->get();
 
@@ -213,7 +213,7 @@ class PayrollController extends Controller
 
         $schedules = ClientSchedule::where('status', 'completed')
             ->where('staff_id', $staff->id)
-            ->whereBetween('start_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
+            ->whereBetween('service_date', [$start_date->format('Y-m-d'), $end_date->format('Y-m-d')])
             ->with(['clientSchedulePayment', 'clientName'])
             ->get();
 
