@@ -51,6 +51,8 @@ class StaffMembersController extends Controller
             ],
             'address' => 'nullable|string|max:500',
             'hiring_date' => 'nullable',
+            'training_rate' => 'nullable|numeric|min:0',
+            'normal_rate' => 'nullable|numeric|min:0',
             'password' => [
                 'required',
                 'string',
@@ -75,6 +77,8 @@ class StaffMembersController extends Controller
             'pic' => $safeName,
             'address' => $validatedData['address'],
             'hiring_date' => isset($validatedData['hiring_date']) ? \Carbon\Carbon::createFromFormat('d/m/Y', $validatedData['hiring_date'])->format('m-d-y') : null,
+            'training_rate' => $validatedData['training_rate'] ?? null,
+            'normal_rate' => $validatedData['normal_rate'] ?? null,
             'plain_password' => $validatedData['password'],
         ]);
 
@@ -155,6 +159,8 @@ class StaffMembersController extends Controller
             'name' => 'required|string|max:255',
             'address' => 'nullable|string|max:500',
             'hiring_date' => 'nullable',
+            'training_rate' => 'nullable|numeric|min:0',
+            'normal_rate' => 'nullable|numeric|min:0',
         ];
 
         if ($request->filled('password')) {
@@ -179,6 +185,8 @@ class StaffMembersController extends Controller
             // Convert d/m/Y format to Y-m-d for database
             $hiringDate = isset($validatedData['hiring_date']) ? \Carbon\Carbon::createFromFormat('d/m/Y', $validatedData['hiring_date'])->format('m-d-y') : $profile->hiring_date;
             $profile->hiring_date = $hiringDate;
+            $profile->training_rate = $validatedData['training_rate'] ?? $profile->training_rate;
+            $profile->normal_rate = $validatedData['normal_rate'] ?? $profile->normal_rate;
 
             if ($request->filled('password')) {
                 $profile->plain_password = $request->password;

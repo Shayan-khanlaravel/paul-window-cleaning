@@ -87,8 +87,26 @@
                                             <input type="text" class="form-control" id="hiring_date" name="hiring_date"
                                                 placeholder="Date of Hiring"
                                                 value="{{ $staff->profile->hiring_date ?? '' }}">
-                                            <label for="address">Date of Hiring *</label>
+                                            <label for="hiring_date">Date of Hiring *</label>
                                             <p>Please Enter Date of Hiring</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="txt_field form-floating">
+                                            <input type="number" class="form-control" name="training_rate" id="training_rate"
+                                                placeholder="" step="0.01" min="0"
+                                                value="{{ $staff->profile->training_rate ?? '' }}">
+                                            <label for="training_rate">Training Rate</label>
+                                            <p>Please Enter Training Rate</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="txt_field form-floating">
+                                            <input type="number" class="form-control" name="normal_rate" id="normal_rate"
+                                                placeholder="" step="0.01" min="0"
+                                                value="{{ $staff->profile->normal_rate ?? '' }}">
+                                            <label for="normal_rate">Normal Rate</label>
+                                            <p>Please Enter Normal Rate</p>
                                         </div>
                                     </div>
                                     <div class="col-md-6">

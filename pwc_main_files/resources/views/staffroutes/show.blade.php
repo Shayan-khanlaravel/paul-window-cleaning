@@ -586,6 +586,7 @@
                                                 }
                                             @endphp
                                             <div class="staff_routes_week_wrapper">
+                                                @include('staffroutes.partials.extra_hours_button', ['schedule' => $schedule, 'staffRoute' => $staffRoute])
                                                 <div class="details_routes_wrapper">
                                                     <div class="week_wrapper">
                                                         <div>
@@ -809,6 +810,7 @@
                                             @endphp
 
                                             <div class="staff_routes_week_wrapper">
+                                                @include('staffroutes.partials.extra_hours_button', ['schedule' => $schedule, 'staffRoute' => $staffRoute])
                                                 <div class="details_routes_wrapper">
                                                     <div class="week_wrapper">
                                                         <div>
@@ -978,6 +980,7 @@
                                             @endphp
 
                                             <div class="staff_routes_week_wrapper completedTab">
+                                                @include('staffroutes.partials.extra_hours_button', ['schedule' => $schedule, 'staffRoute' => $staffRoute])
                                                 <div class="details_routes_wrapper">
                                                     <div class="week_wrapper">
                                                         <div>
@@ -1230,6 +1233,91 @@
             </div>
         </div>
     </div>
+
+    @if (auth()->user()->hasRole('staff'))
+        <div class="modal fade" id="extraHoursModal" tabindex="-1" aria-labelledby="extraHoursModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <div>
+                            <h2 class="modal-title" id="extraHoursModalLabel">Add Extra Hours</h2>
+                            <p class="mb-0 text-muted" id="extraHoursWeekLabel"></p>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="extraHoursForm">
+                            @csrf
+                            <input type="hidden" id="extra_hours_route_id" name="route_id">
+                            <input type="hidden" id="extra_hours_week_number" name="week_number">
+                            <input type="hidden" id="extra_hours_week_start" name="week_start_date">
+                            <input type="hidden" id="extra_hours_week_end" name="week_end_date">
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="txt_field form-floating">
+                                        <select class="form-control" id="extra_hours_day" name="service_date" required>
+                                            <option value="">Select Day</option>
+                                        </select>
+                                        <label for="extra_hours_day">Day *</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="txt_field form-floating">
+                                        <input type="time" class="form-control" id="extra_hours_start_time" name="start_time" required>
+                                        <label for="extra_hours_start_time">Start Time *</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="txt_field form-floating">
+                                        <input type="time" class="form-control" id="extra_hours_end_time" name="end_time" required>
+                                        <label for="extra_hours_end_time">End Time *</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <p id="extraHoursFormError" class="text-danger mt-2 mb-0" style="display: none;"></p>
+                            <div class="mt-3">
+                                <button type="submit" class="btn_global btn_blue" id="extraHoursSubmitBtn">
+                                    Add Entry <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                        </form>
+
+                        <hr class="my-4">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">Previous Extra Hours</h5>
+                            <div>
+                                <strong>Total Extra Hours: </strong>
+                                <span id="extraHoursTotal">0.00</span> hrs
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Day</th>
+                                        <th>Start Time</th>
+                                        <th>End Time</th>
+                                        <th>Duration</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="extraHoursTableBody">
+                                    <tr id="extraHoursEmptyRow">
+                                        <td colspan="4" class="text-center text-muted">No extra hours added yet.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn_global btn_grey" data-bs-dismiss="modal">Close <i class="fa-solid fa-x"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 
 @endsection
 @push('js')
@@ -2858,4 +2946,153 @@
             });
         }); // End of document.ready for timer functionality
     </script>
+
+    @if (auth()->user()->hasRole('staff'))
+        <script>
+            $(document).ready(function() {
+                const extraHoursModal = $('#extraHoursModal');
+                const extraHoursForm = $('#extraHoursForm');
+                const extraHoursDay = $('#extra_hours_day');
+                const extraHoursError = $('#extraHoursFormError');
+                const extraHoursTableBody = $('#extraHoursTableBody');
+                const extraHoursTotal = $('#extraHoursTotal');
+
+                function buildWeekDayOptions(weekStart, weekEnd) {
+                    extraHoursDay.empty().append('<option value="">Select Day</option>');
+
+                    const start = new Date(weekStart + 'T00:00:00');
+                    const end = new Date(weekEnd + 'T00:00:00');
+                    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+                    for (let current = new Date(start); current <= end; current.setDate(current.getDate() + 1)) {
+                        const value = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
+                        const label = `${dayNames[current.getDay()]}, ${monthNames[current.getMonth()]} ${current.getDate()}, ${current.getFullYear()}`;
+                        extraHoursDay.append(`<option value="${value}">${label}</option>`);
+                    }
+                }
+
+                function renderExtraHoursEntries(entries, totalHours) {
+                    extraHoursTableBody.empty();
+
+                    if (!entries || entries.length === 0) {
+                        extraHoursTableBody.append(
+                            '<tr id="extraHoursEmptyRow"><td colspan="4" class="text-center text-muted">No extra hours added yet.</td></tr>'
+                        );
+                    } else {
+                        entries.forEach(function(entry) {
+                            extraHoursTableBody.append(`
+                                <tr>
+                                    <td>${entry.day}</td>
+                                    <td>${entry.start_time}</td>
+                                    <td>${entry.end_time}</td>
+                                    <td>${entry.duration_label}</td>
+                                </tr>
+                            `);
+                        });
+                    }
+
+                    extraHoursTotal.text(parseFloat(totalHours || 0).toFixed(2));
+                }
+
+                function loadExtraHoursEntries() {
+                    const routeId = $('#extra_hours_route_id').val();
+                    const weekStart = $('#extra_hours_week_start').val();
+
+                    $.ajax({
+                        url: "{{ route('staff-extra-hours.index') }}",
+                        type: 'GET',
+                        data: {
+                            route_id: routeId,
+                            week_start_date: weekStart
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                renderExtraHoursEntries(response.entries, response.total_hours);
+                            }
+                        },
+                        error: function(xhr) {
+                            const message = xhr.responseJSON?.message || 'Failed to load extra hours.';
+                            extraHoursError.text(message).show();
+                        }
+                    });
+                }
+
+                extraHoursModal.on('show.bs.modal', function(event) {
+                    const button = $(event.relatedTarget);
+                    const routeId = button.data('route-id');
+                    const weekNumber = button.data('week-number');
+                    const weekStart = button.data('week-start');
+                    const weekEnd = button.data('week-end');
+                    const weekLabel = button.data('week-label');
+
+                    $('#extra_hours_route_id').val(routeId);
+                    $('#extra_hours_week_number').val(weekNumber);
+                    $('#extra_hours_week_start').val(weekStart);
+                    $('#extra_hours_week_end').val(weekEnd);
+                    $('#extraHoursWeekLabel').text(weekLabel);
+
+                    extraHoursForm[0].reset();
+                    $('#extra_hours_route_id').val(routeId);
+                    $('#extra_hours_week_number').val(weekNumber);
+                    $('#extra_hours_week_start').val(weekStart);
+                    $('#extra_hours_week_end').val(weekEnd);
+                    extraHoursError.hide().text('');
+
+                    buildWeekDayOptions(weekStart, weekEnd);
+                    loadExtraHoursEntries();
+                });
+
+                extraHoursForm.on('submit', function(e) {
+                    e.preventDefault();
+                    extraHoursError.hide().text('');
+
+                    const startTime = $('#extra_hours_start_time').val();
+                    const endTime = $('#extra_hours_end_time').val();
+
+                    if (startTime && endTime && startTime >= endTime) {
+                        extraHoursError.text('End time must be after start time.').show();
+                        return;
+                    }
+
+                    const submitBtn = $('#extraHoursSubmitBtn');
+                    submitBtn.prop('disabled', true);
+
+                    $.ajax({
+                        url: "{{ route('staff-extra-hours.store') }}",
+                        type: 'POST',
+                        data: extraHoursForm.serialize(),
+                        success: function(response) {
+                            if (response.success) {
+                                renderExtraHoursEntries(response.entries, response.total_hours);
+                                $('#extra_hours_start_time').val('');
+                                $('#extra_hours_end_time').val('');
+                                extraHoursDay.val('');
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Added',
+                                    text: response.message,
+                                    timer: 1800,
+                                    showConfirmButton: false
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            let message = 'Failed to add extra hours.';
+                            if (xhr.responseJSON?.message) {
+                                message = xhr.responseJSON.message;
+                            } else if (xhr.responseJSON?.errors) {
+                                message = Object.values(xhr.responseJSON.errors).flat().join(' ');
+                            }
+                            extraHoursError.text(message).show();
+                        },
+                        complete: function() {
+                            submitBtn.prop('disabled', false);
+                        }
+                    });
+                });
+            });
+        </script>
+    @endif
 @endpush

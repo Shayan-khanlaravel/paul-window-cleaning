@@ -156,6 +156,8 @@ Route::group(['middleware' => ['auth']], function () {
     Route::post('timelogs/stop', ["\App\Http\Controllers\TimelogController", 'stopTimer'])->name('timelogs.stop');
     Route::get('timelogs/active', ["\App\Http\Controllers\TimelogController", 'getActiveTimers'])->name('timelogs.active');
     Route::resource('timelogs', "\App\Http\Controllers\TimelogController");
+    Route::get('staff-extra-hours', [\App\Http\Controllers\StaffExtraHoursController::class, 'index'])->name('staff-extra-hours.index');
+    Route::post('staff-extra-hours', [\App\Http\Controllers\StaffExtraHoursController::class, 'store'])->name('staff-extra-hours.store');
     Route::controller(ClientsController::class)->group(function () {
         Route::get('/export-clients', 'exportClients')->name('clients.export');
         Route::get('/check-email-phone', 'checkEmailPhone')->name('clients.check-email-phone');
