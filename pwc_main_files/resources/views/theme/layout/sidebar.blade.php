@@ -261,7 +261,7 @@
                             <div class="menu-item ">
                                 <div class="menu-content">
                                     <a href="{{ url('deposits') }}"
-                                        class="nav_list @if (request()->is('deposits')) active @endif"
+                                        class="nav_list @if (request()->is('deposits') || request()->is('deposits/route*')) active @endif"
                                         aria-current="page">
                                         <div class="sidebar_icon"><i class="fa-solid fa-wallet"></i></div>
                                         Total Undeposited Cash

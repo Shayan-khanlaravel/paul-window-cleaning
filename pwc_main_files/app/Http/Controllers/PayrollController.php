@@ -24,8 +24,7 @@ class PayrollController extends Controller
      */
     private function getPeriodData(?string $selectedPeriodKey): array
     {
-        ['year' => $year, 'month' => $month, 'half' => $half] =
-            PayrollPeriod::parse($selectedPeriodKey);
+        ['year' => $year, 'month' => $month, 'half' => $half] = PayrollPeriod::parse($selectedPeriodKey);
 
         [$startDate, $endDate] = PayrollPeriod::range($year, $month, $half);
 

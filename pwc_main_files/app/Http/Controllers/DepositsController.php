@@ -26,8 +26,17 @@ class DepositsController extends Controller
                     ->get();
 
                 $cashPayments = $this->getUndepositedCashPayments($user->id, $request, $assignedRouteIds);
+                $undepositedRoutes = $cashPayments->groupBy('route_id_display')->map(function ($payments, $routeId) use ($routes) {
+                    $route = $routeId ? $routes->firstWhere('id', $routeId) : null;
+                    return [
+                        'route_id' => $routeId ?: 'unassigned',
+                        'route_name' => $route ? $route->name : 'Unassigned Clients',
+                        'total_amount' => $payments->sum(fn($p) => (float) ($p->final_price ?? 0)),
+                        'record_count' => $payments->count(),
+                    ];
+                });
 
-                return view('dashboard.deposits', compact('cashPayments', 'routes'));
+                return view('dashboard.deposits', compact('undepositedRoutes', 'routes'));
             }
 
             $query = Deposit::with(['route', 'staff', 'clientSchedule.clientName']);
@@ -719,6 +728,140 @@ class DepositsController extends Controller
         }
     }
 
+    public function routeDetail(Request $request, $routeId)
+    {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return redirect()->route('login');
+            }
+
+            if ($user->hasRole('staff')) {
+                $assignedRouteIds = AssignRoute::where('staff_id', $user->id)
+                    ->pluck('route_id')
+                    ->toArray();
+
+                if ($routeId !== 'unassigned' && !in_array($routeId, $assignedRouteIds)) {
+                    return redirect()->back()->with([
+                        'title' => 'Error',
+                        'message' => 'You do not have access to this route',
+                        'type' => 'error'
+                    ]);
+                }
+            } else {
+                $assignedRouteIds = StaffRoute::where('status', 1)->pluck('id')->toArray();
+            }
+
+            if ($routeId === 'unassigned' || $routeId === '0') {
+                $route = (object)[
+                    'id' => 'unassigned',
+                    'name' => 'Unassigned Clients'
+                ];
+            } else {
+                $route = StaffRoute::findOrFail($routeId);
+            }
+
+            // Fetch payments specifically for this route
+            $request->merge(['route_id' => $routeId]);
+            $cashPayments = $this->getUndepositedCashPayments($user->id, $request, $assignedRouteIds);
+
+            $totalAmount = $cashPayments->sum(fn($payment) => (float) ($payment->final_price ?? 0));
+
+            return view('dashboard.undeposited_route_detail', compact('route', 'cashPayments', 'totalAmount'));
+        } catch (\Exception $e) {
+            return redirect()->back()->with([
+                'title' => 'Error',
+                'message' => 'Failed to load route details: ' . $e->getMessage(),
+                'type' => 'error'
+            ]);
+        }
+    }
+
+    public function markRouteDeposited(Request $request, $routeId)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized.',
+            ], 401);
+        }
+
+        $assignedRouteIds = AssignRoute::where('staff_id', $user->id)
+            ->pluck('route_id')
+            ->toArray();
+
+        if ($user->hasRole('staff') && $routeId !== 'unassigned' && !in_array($routeId, $assignedRouteIds)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You are not authorized to update this route.',
+            ], 403);
+        }
+
+        // Set route_id in request so we can reuse helper
+        $request->merge(['route_id' => $routeId]);
+        $payments = $this->getUndepositedCashPayments($user->id, $request, $assignedRouteIds);
+
+        if ($payments->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No undeposited cash payments found for this route.',
+            ], 400);
+        }
+
+        foreach ($payments as $payment) {
+            if ($payment->payment_type !== 'cash' || $payment->status !== 'paid') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only paid cash payments can be marked as deposited.',
+                ], 422);
+            }
+
+            if ($payment->payment_status === 'paid') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'One or more payments are already marked as deposited.',
+                ], 422);
+            }
+
+            if (Deposit::where('client_payment_id', $payment->id)->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A deposit record already exists for one or more payments.',
+                ], 422);
+            }
+        }
+
+        try {
+            DB::transaction(function () use ($payments, $user) {
+                foreach ($payments as $payment) {
+                    $payment->update(['payment_status' => 'paid']);
+                    $this->createDepositFromPayment($payment, $user);
+                }
+            });
+        } catch (\Exception $e) {
+            Log::error('Error marking route payments as deposited: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to mark payments as deposited: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        Notification::create([
+            'user_id' => 2,
+            'action_id' => 2,
+            'title' => ($user->name ?? 'Staff') . ' submitted cash deposit(s)',
+            'message' => $payments->count() . ' cash payment(s) marked for deposit review.',
+            'type' => 'new_deposit',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $payments->count() . ' payments marked as deposited successfully.',
+        ]);
+    }
+
     private function getUndepositedCashPayments($staffId, Request $request, array $assignedRouteIds)
     {
         $depositedScheduleIds = Deposit::whereNotNull('schedule_id')->pluck('schedule_id');
@@ -732,28 +875,18 @@ class DepositsController extends Controller
             ->where('status', 'paid')
             ->where('staff_id', $staffId)
             ->where(function ($q) {
-                $q->whereNull('payment_status')
-                    ->orWhere('payment_status', 'payment')
-                    ->orWhere('payment_status', 'pending');
+                $q->whereNull('payment_status')->orWhere('payment_status', 'payment')->orWhere('payment_status', 'pending');
             })
             ->when($depositedScheduleIds->isNotEmpty(), function ($q) use ($depositedScheduleIds) {
                 $q->where(function ($sub) use ($depositedScheduleIds) {
-                    $sub->whereNull('schedule_id')
-                        ->orWhereNotIn('schedule_id', $depositedScheduleIds);
+                    $sub->whereNull('schedule_id')->orWhereNotIn('schedule_id', $depositedScheduleIds);
                 });
             })
             ->when($depositedPaymentIds->isNotEmpty(), function ($q) use ($depositedPaymentIds) {
                 $q->whereNotIn('id', $depositedPaymentIds);
             });
 
-        if ($request->filled('route_id')) {
-            $routeId = $request->route_id;
-            $query->whereHas('client.clientRouteStaff', function ($q) use ($routeId) {
-                $q->where('route_id', $routeId);
-            });
-        }
-
-        return $query->orderByDesc('created_at')->get()->map(function ($payment) use ($assignedRouteIds) {
+        $payments = $query->orderByDesc('created_at')->get()->map(function ($payment) use ($assignedRouteIds) {
             $routeAssignment = $payment->client?->clientRouteStaff
                 ?->first(fn($cr) => in_array($cr->route_id, $assignedRouteIds));
 
@@ -762,6 +895,18 @@ class DepositsController extends Controller
 
             return $payment;
         });
+
+        if ($request->filled('route_id')) {
+            $routeId = $request->route_id;
+            $payments = $payments->filter(function ($payment) use ($routeId) {
+                if ($routeId === 'unassigned' || $routeId === '0') {
+                    return empty($payment->route_id_display);
+                }
+                return (string) $payment->route_id_display === (string) $routeId;
+            });
+        }
+
+        return $payments;
     }
 
     /**
@@ -863,11 +1008,11 @@ class DepositsController extends Controller
         $routeId = $payment->client?->clientRouteStaff?->first()?->route_id;
 
         if (!$routeId) {
-            throw new \RuntimeException('Unable to determine route for payment #' . $payment->id);
+            \Log::warning('Unable to determine route for payment #' . $payment->id);
         }
 
         if (!$payment->schedule_id) {
-            throw new \RuntimeException('Payment #' . $payment->id . ' is not linked to a schedule.');
+            \Log::warning('Payment #' . $payment->id . ' is not linked to a schedule.');
         }
 
         $referenceDate = $schedule?->service_date
