@@ -45,7 +45,8 @@ class Client extends Model
     }
     public function clientRoute()
     {
-        return $this->belongsToMany(StaffRoute::class, 'client_routes', 'client_id', 'route_id');
+        return $this->belongsToMany(StaffRoute::class, 'client_routes', 'client_id', 'route_id')
+            ->wherePivotNull('deleted_at');
     }
     public function clientWeek()
     {
