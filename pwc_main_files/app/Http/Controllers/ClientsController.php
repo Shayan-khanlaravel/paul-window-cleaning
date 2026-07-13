@@ -56,10 +56,7 @@ class ClientsController extends Controller
         $routes = StaffRoute::get();
 
         return response()
-            ->view('clients.index', ['clients' => $clients, 'routes' => $routes])
-            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0');
+            ->view('clients.index', ['clients' => $clients, 'routes' => $routes])->header('Cache-Control', 'no-cache, no-store, must-revalidate')->header('Pragma', 'no-cache')->header('Expires', '0');
     }
 
     public function create()
@@ -1170,10 +1167,10 @@ class ClientsController extends Controller
 
             $branch->clientRouteStaff()->delete();
 
-            if ($request->input('route_id')) { 
+            if ($request->input('route_id')) {
                 ClientRoute::updateOrCreate(
-                    ['client_id' => $branch->id],   
-                    ['route_id' => $request->input('route_id')]   
+                    ['client_id' => $branch->id],
+                    ['route_id' => $request->input('route_id')]
                 );
             }
 

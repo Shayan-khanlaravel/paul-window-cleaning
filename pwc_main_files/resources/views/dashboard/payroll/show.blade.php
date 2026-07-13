@@ -51,7 +51,6 @@
                             <thead>
                                 <tr class="fw-bold">
                                     <th class="ps-4 min-w-150px rounded-start">Route</th>
-                                    <th class="min-w-150px">Period</th>
                                     <th class="min-w-100px text-end">Gross Sales</th>
                                     <th class="min-w-100px text-end">Gross Commission</th>
                                     <th class="min-w-150px text-end">Bonus</th>
@@ -63,11 +62,6 @@
                                 <tr>
                                     <td class="ps-4">
                                         <span class="text-dark fw-bold d-block fs-6">{{ $routeData['route_name'] }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="text-muted fw-semibold text-muted d-block fs-7">
-                                            {{ $routeData['start']->format('M d') }} - {{ $routeData['end']->format('M d') }}
-                                        </span>
                                     </td>
                                     <td class="text-end">
                                         <span class="text-muted fw-semibold text-muted d-block fs-7">${{ number_format($routeData['gross_sales'], 2) }}</span>
