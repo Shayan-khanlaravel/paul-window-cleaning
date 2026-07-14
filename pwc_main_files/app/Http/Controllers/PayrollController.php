@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\ClientSchedule;
 use App\Models\PayrollBonus;
-use App\Models\StaffExtraHour;
+use App\Models\StaffLogHour;
 use App\Models\StaffRoute;
 use App\Support\PayrollPeriod;
 use Carbon\Carbon;
@@ -59,7 +59,7 @@ class PayrollController extends Controller
      */
     private function extraHoursSummary(User $staff, Carbon $startDate, Carbon $endDate): array
     {
-        $hoursByType = StaffExtraHour::where('staff_id', $staff->id)
+        $hoursByType = StaffLogHour::where('staff_id', $staff->id)
             ->whereBetween('service_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
             ->selectRaw('rate_type, SUM(duration_hours) as total_hours')
             ->groupBy('rate_type')
@@ -93,7 +93,7 @@ class PayrollController extends Controller
         $normalRate = (float) (optional($staff->profile)->normal_rate ?? 0);
         $trainingRate = (float) (optional($staff->profile)->training_rate ?? 0);
 
-        $rows = StaffExtraHour::where('staff_id', $staff->id)
+        $rows = StaffLogHour::where('staff_id', $staff->id)
             ->whereBetween('service_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
             ->selectRaw('route_id, rate_type, SUM(duration_hours) as total_hours')
             ->groupBy('route_id', 'rate_type')

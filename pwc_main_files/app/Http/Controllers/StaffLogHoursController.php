@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssignRoute;
-use App\Models\StaffExtraHour;
+use App\Models\StaffLogHour;
 use App\Models\StaffRoute;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
-class StaffExtraHoursController extends Controller
+class StaffLogHoursController extends Controller
 {
     public function __construct()
     {
@@ -30,13 +30,13 @@ class StaffExtraHoursController extends Controller
             return response()->json(['success' => false, 'message' => 'This route is not assigned to you'], 403);
         }
 
-        $entries = StaffExtraHour::where('staff_id', auth()->id())
+        $entries = StaffLogHour::where('staff_id', auth()->id())
             ->where('route_id', $validated['route_id'])
             ->whereDate('week_start_date', $validated['week_start_date'])
             ->orderBy('service_date')
             ->orderBy('start_time')
             ->get()
-            ->map(fn(StaffExtraHour $entry) => $this->formatEntry($entry));
+            ->map(fn(StaffLogHour $entry) => $this->formatEntry($entry));
 
         $totalHours = round($entries->sum('duration_hours'), 2);
 
@@ -61,7 +61,6 @@ class StaffExtraHoursController extends Controller
             'service_date' => 'required|date|after_or_equal:week_start_date|before_or_equal:week_end_date',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
-            'rate_type' => 'required|in:normal,training',
         ]);
 
         if (!$this->routeIsAssignedToStaff($validated['route_id'], auth()->id())) {
@@ -81,11 +80,8 @@ class StaffExtraHoursController extends Controller
         $durationHours = round($end->diffInMinutes($start) / 60, 2);
 
         $profile = auth()->user()->profile;
-        $rateAmount = $validated['rate_type'] === 'training'
-            ? $profile?->training_rate
-            : $profile?->normal_rate;
 
-        $entry = StaffExtraHour::create([
+        $entry = StaffLogHour::create([
             'staff_id' => auth()->id(),
             'route_id' => $validated['route_id'],
             'week_number' => $validated['week_number'],
@@ -93,22 +89,21 @@ class StaffExtraHoursController extends Controller
             'service_date' => $validated['service_date'],
             'start_time' => $validated['start_time'] . ':00',
             'end_time' => $validated['end_time'] . ':00',
-            'rate_type' => $validated['rate_type'],
-            'rate_amount' => $rateAmount,
+            'rate_amount' => $profile?->normal_rate,
             'duration_hours' => $durationHours,
         ]);
 
-        $entries = StaffExtraHour::where('staff_id', auth()->id())
+        $entries = StaffLogHour::where('staff_id', auth()->id())
             ->where('route_id', $validated['route_id'])
             ->whereDate('week_start_date', $validated['week_start_date'])
             ->orderBy('service_date')
             ->orderBy('start_time')
             ->get()
-            ->map(fn(StaffExtraHour $item) => $this->formatEntry($item));
+            ->map(fn(StaffLogHour $item) => $this->formatEntry($item));
 
         return response()->json([
             'success' => true,
-            'message' => 'Extra hours added successfully.',
+            'message' => 'Log hours added successfully.',
             'entry' => $this->formatEntry($entry),
             'entries' => $entries,
             'total_hours' => round($entries->sum('duration_hours'), 2),
@@ -122,7 +117,7 @@ class StaffExtraHoursController extends Controller
         })->where('id', $routeId)->exists();
     }
 
-    private function formatEntry(StaffExtraHour $entry): array
+    private function formatEntry(StaffLogHour $entry): array
     {
         $serviceDate = Carbon::parse($entry->service_date);
 
@@ -132,8 +127,6 @@ class StaffExtraHoursController extends Controller
             'service_date' => $serviceDate->format('Y-m-d'),
             'start_time' => Carbon::parse($entry->start_time)->format('g:i A'),
             'end_time' => Carbon::parse($entry->end_time)->format('g:i A'),
-            'rate_type' => $entry->rate_type,
-            'rate_type_label' => ucfirst($entry->rate_type),
             'rate_amount' => $entry->rate_amount !== null ? (float) $entry->rate_amount : null,
             'duration_hours' => (float) $entry->duration_hours,
             'duration_label' => $this->formatDurationLabel((float) $entry->duration_hours),
