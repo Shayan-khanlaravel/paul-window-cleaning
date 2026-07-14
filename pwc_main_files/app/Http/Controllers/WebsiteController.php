@@ -611,6 +611,7 @@ class WebsiteController extends Controller
         // Fetch data
         $query = ClientSchedule::where('status', 'completed')
             ->with([
+                'clientSchedulePrice.clientPaymentPrice',
                 'clientSchedulePayment',
                 'clientName.clientRouteStaff.route',
                 'StaffName'
@@ -3855,36 +3856,13 @@ class WebsiteController extends Controller
             if ($weekData && $weekData->count() > 0) {
                 foreach ($weekData as $routeId => $schedules) {
                     $routeName = $schedules->first()->clientName?->clientRouteStaff->first()->route->name ?? 'N/A';
-//                    $staffName = $schedules->first()->StaffName->first_name ?? 'N/A';
-                    $staffName = $schedules->first()?->StaffName?->first_name ?? $schedules->first()?->StaffName?->name ?? 'N/A';
+                    $staffName = $schedules->first()?->StaffName?->name ?? 'N/A';
+                    $staffName = $staffName === 'N/A' ? 'N/A' : preg_replace('/^(\S+)\s+(\S).*/', '$1 $2', $staffName);
 
                     // Calculate summary values
                     $totalSales = $schedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
                     $cashSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash');
                     $cashRecord = $cashSchedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
-
-                    $dbWeekNum = $currentWeekNum - 1;
-                    $weekString = 'week' . $dbWeekNum;
-                    $selectedMonthName = ucfirst(strtolower(explode(' ', $baseMonthName)[0] ?? now()->format('F')));
-
-                    $matchingDeposits = $allDeposits
-                        ->where('route_id', $routeId)
-                        ->where('week', $weekString)
-                        ->where('month', $selectedMonthName)
-                        ->where('year', $selectedYear);
-                    $totalDeposited = $matchingDeposits->sum('deposit_amount');
-
-                    $invoiceSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'invoice');
-                    $invoicePaid = $invoiceSchedules
-                        ->filter(fn($s) => ($s->clientSchedulePayment->payment_status ?? null) == 'paid')
-                        ->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
-                    $invoiceUnpaid = $invoiceSchedules
-                        ->filter(fn($s) => ($s->clientSchedulePayment->payment_status ?? null) === null)
-                        ->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
-
-                    $billed = $totalDeposited + $invoicePaid;
-                    $cashUnpaid = $cashRecord - $totalDeposited;
-                    $unpaid = $cashUnpaid + $invoiceUnpaid;
 
                     // Calculate HRs from client_payments start_time and end_time
                     $totalHours = 0;
@@ -3901,101 +3879,122 @@ class WebsiteController extends Controller
 
                     // Total Sales breakdown: Cash (bold) + Invoice (bold) + Total Sales (bold) with amounts not bold
                     $totalSalesRich = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
-                    $cashLabel = $totalSalesRich->createTextRun("Cash: ");
-                    $cashLabel->getFont()->setBold(true);
-                    $totalSalesRich->createText(number_format($cashRecord, 2) . "\n");
-                    $invoiceLabel = $totalSalesRich->createTextRun("Invoice: ");
-                    $invoiceLabel->getFont()->setBold(true);
-                    $totalSalesRich->createText(number_format($invoiceSchedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0), 2) . "\n");
-                    $totalLabel = $totalSalesRich->createTextRun("Total Sales: ");
+//                    $cashLabel = $totalSalesRich->createTextRun("Cash: ");
+//                    $cashLabel->getFont()->setBold(true);
+//                    $totalSalesRich->createText(number_format($cashRecord, 2) . "\n");
+//                    $invoiceLabel = $totalSalesRich->createTextRun("Invoice: ");
+//                    $invoiceLabel->getFont()->setBold(true);
+//                    $totalSalesRich->createText(number_format($invoiceSchedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0), 2) . "\n");
+                    $totalLabel = $totalSalesRich->createTextRun("$ ");
                     $totalLabel->getFont()->setBold(true);
                     $totalSalesRich->createText(number_format($totalSales, 2));
 
                     // Cash Record breakdown: Client names (bold) with amounts (not bold)
                     $cashRecordRich = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
-                    $first = true;
-                    foreach ($cashSchedules as $schedule) {
-                        if (!$first) $cashRecordRich->createText("\n");
-                        $first = false;
-                        $clientName = $schedule->clientName->name ?? 'Unknown';
-                        $amount = $schedule->clientSchedulePayment->final_price ?? 0;
-                        $nameRun = $cashRecordRich->createTextRun($clientName . ": ");
+                    if ($cashSchedules->isEmpty()) {
+                        $nameRun = $cashRecordRich->createTextRun('$ ');
                         $nameRun->getFont()->setBold(true);
-                        $cashRecordRich->createText(number_format($amount, 2));
+                        $cashRecordRich->createText('0');
+                    } else {
+                        $first = true;
+                        foreach ($cashSchedules as $schedule) {
+                            if (!$first) {
+                                $cashRecordRich->createText("\n");
+                            }
+                            $first = false;
+                            $amount = $schedule->clientSchedulePayment->final_price ?? 0;
+                            $nameRun = $cashRecordRich->createTextRun('$ ');
+                            $nameRun->getFont()->setBold(true);
+                            $cashRecordRich->createText(number_format($amount, 2));
+                        }
                     }
 
-                    // Billed breakdown: Labels (bold) + amounts (not bold)
+                    // Billed breakdown: Client Name (Scope) (bold) + Price (not bold), one client per line
+                    $billedSchedules = $schedules->filter(function ($s) {
+                        $payment = $s->clientSchedulePayment;
+                        return ($payment->payment_type ?? '') == 'cash';
+                    });
                     $billedRich = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
-                    $cashDepLabel = $billedRich->createTextRun("Cash Received: ");
-                    $cashDepLabel->getFont()->setBold(true);
-                    $billedRich->createText(number_format($totalDeposited, 2) . "\n");
-                    $invPaidLabel = $billedRich->createTextRun("Invoice Paid: ");
-                    $invPaidLabel->getFont()->setBold(true);
-                    $billedRich->createText(number_format($invoicePaid, 2) . "\n");
-                    $totalBilledLabel = $billedRich->createTextRun("Total Billed: ");
-                    $totalBilledLabel->getFont()->setBold(true);
-                    $billedRich->createText(number_format($billed, 2));
+                    if ($billedSchedules->isEmpty()) {
+                        $billedRich->createText('-');
+                    } else {
+                    $firstBilled = true;
+                    foreach ($billedSchedules as $schedule) {
+                        if (!$firstBilled) $billedRich->createText("\n");
+                            $firstBilled = false;
+                            $clientName = $schedule->clientName->name ?? 'Unknown';
+                            $scope = $schedule->clientSchedulePrice
+                                ->map(fn ($price) => $price->clientPaymentPrice?->name)
+                                ->filter()
+                                ->implode(', ');
 
-                    // Unpaid breakdown: Labels (bold) + amounts (not bold)
+                            $nameRun = $billedRich->createTextRun(
+                                $scope ? "$clientName ($scope): " : "$clientName: "
+                            );
+                            $amount = $schedule->clientSchedulePayment->final_price ?? 0;
+                            $billedRich->createText(number_format($amount, 2));
+                        }
+                    }
+
+                    // Unpaid breakdown: Client Name (bold) + Unpaid Amount (not bold), one client per line
+                    $unpaidSchedules = $schedules->filter(function ($s) {
+                        $payment = $s->clientSchedulePayment;
+                        return ($payment->payment_type ?? '') == 'invoice'
+                            && ($payment->payment_status ?? null) === null;
+                    });
                     $unpaidRich = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
-                    $cashUnpaidLabel = $unpaidRich->createTextRun("Cash Unpaid: ");
-                    $cashUnpaidLabel->getFont()->setBold(true);
-                    $unpaidRich->createText(number_format($cashUnpaid, 2) . "\n");
-                    $invUnpaidLabel = $unpaidRich->createTextRun("Invoice Unpaid: ");
-                    $invUnpaidLabel->getFont()->setBold(true);
-                    $unpaidRich->createText(number_format($invoiceUnpaid, 2) . "\n");
-                    $totalUnpaidLabel = $unpaidRich->createTextRun("Total Unpaid: ");
-                    $totalUnpaidLabel->getFont()->setBold(true);
-                    $unpaidRich->createText(number_format($unpaid, 2));
+                    if ($unpaidSchedules->isEmpty()) {
+                        $unpaidRich->createText('-');
+                    } else {
+                    $firstUnpaid = true;
+                        foreach ($unpaidSchedules as $schedule) {
+                            if (!$firstUnpaid) $unpaidRich->createText("\n");
+                            $firstUnpaid = false;
+                            $clientName = $schedule->clientName->user->name ?? 'Unknown';
+                            $amount = $schedule->clientSchedulePayment->final_price ?? 0;
+
+                            $nameRun = $unpaidRich->createTextRun($clientName . ": ");
+                            $unpaidRich->createText(number_format($amount, 2));
+                        }
+                    }
 
                     // Omit breakdown: Client names (bold) + amount (normal) + Reason label (bold) + reason text (not bold)
                     $omitSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->option ?? '') == 'omit');
                     $omitRich = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
+                    if ($omitSchedules->isEmpty()) {
+                        $unpaidRich->createText('-');
+                    } else {
                     $firstOmit = true;
                     foreach ($omitSchedules as $schedule) {
                         if (!$firstOmit) $omitRich->createText("\n\n");
                         $firstOmit = false;
                         $clientName = $schedule->clientName->name ?? 'Unknown';
-                        $amount = $schedule->clientSchedulePayment->final_price ?? 0;
                         $reason = $schedule->clientSchedulePayment->reason ?? '';
 
-                        // Client name (bold) + amount (normal)
-                        $clientRun = $omitRich->createTextRun($clientName . ": ");
-                        $clientRun->getFont()->setBold(true);
-                        $omitRich->createText(number_format($amount, 2));
-
-                        // Add Reason only if it exists
-                        if (!empty($reason)) {
-                            $omitRich->createText("\n");
-                            $reasonLabel = $omitRich->createTextRun("Reason: ");
-                            $reasonLabel->getFont()->setBold(true);
-                            $omitRich->createText($reason);
-                        }
+                        $nameRun = $omitRich->createTextRun($clientName . ": " . $reason);
+                    }
                     }
 
                     // Partial breakdown: Client names (bold) + amount (normal) + Partial Scope label (bold) + scope text (not bold)
                     $partialSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->option ?? '') == 'partially');
                     $partialRich = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
+                    if ($partialSchedules->isEmpty()) {
+                        $unpaidRich->createText('-');
+                    } else {
                     $firstPartial = true;
                     foreach ($partialSchedules as $schedule) {
                         if (!$firstPartial) $partialRich->createText("\n\n");
                         $firstPartial = false;
                         $clientName = $schedule->clientName->name ?? 'Unknown';
-                        $amount = $schedule->clientSchedulePayment->final_price ?? 0;
                         $scope = $schedule->clientSchedulePayment->partial_completed_scope ?? '';
+                        $amount = $schedule->clientSchedulePayment->final_price ?? 0;
 
-                        // Client name (bold) + amount (normal)
-                        $clientRun = $partialRich->createTextRun($clientName . ": ");
-                        $clientRun->getFont()->setBold(true);
+                        $nameRun = $partialRich->createTextRun(
+                            $scope ? "$clientName ($scope): " : "$clientName: "
+                        );
+                        $amount = $schedule->clientSchedulePayment->final_price ?? 0;
                         $partialRich->createText(number_format($amount, 2));
-
-                        // Add Partial Scope only if it exists
-                        if (!empty($scope)) {
-                            $partialRich->createText("\n");
-                            $scopeLabel = $partialRich->createTextRun("Partial Scope: ");
-                            $scopeLabel->getFont()->setBold(true);
-                            $partialRich->createText($scope);
-                        }
+                    }
                     }
 
                     // Write row data
@@ -4044,9 +4043,9 @@ class WebsiteController extends Controller
 
         // Set column widths
         $sheet->getColumnDimension('A')->setWidth(15);
-        $sheet->getColumnDimension('B')->setWidth(15);
-        $sheet->getColumnDimension('C')->setWidth(20);
-        $sheet->getColumnDimension('D')->setWidth(20);
+        $sheet->getColumnDimension('B')->setWidth(11);
+        $sheet->getColumnDimension('C')->setWidth(11);
+        $sheet->getColumnDimension('D')->setWidth(12);
         $sheet->getColumnDimension('E')->setWidth(5);
         $sheet->getColumnDimension('F')->setWidth(30);
         $sheet->getColumnDimension('G')->setWidth(30);

@@ -1240,7 +1240,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <div>
-                            <h2 class="modal-title" id="extraHoursModalLabel">Add Extra Hours</h2>
+                            <h2 class="modal-title" id="extraHoursModalLabel">Log Hours</h2>
                             <p class="mb-0 text-muted" id="extraHoursWeekLabel"></p>
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

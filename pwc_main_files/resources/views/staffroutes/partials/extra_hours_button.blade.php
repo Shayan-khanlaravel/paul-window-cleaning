@@ -9,7 +9,7 @@
             data-week-start="{{ \Carbon\Carbon::parse($schedule['start_date'])->format('Y-m-d') }}"
             data-week-end="{{ \Carbon\Carbon::parse($schedule['end_date'])->format('Y-m-d') }}"
             data-week-label="Week {{ $schedule['week_number'] }} ({{ \Carbon\Carbon::parse($schedule['start_date'])->format('d M') }} - {{ \Carbon\Carbon::parse($schedule['end_date'])->format('d M') }})">
-            Add Extra Hours <i class="fa-solid fa-clock"></i>
+            Log Hours <i class="fa-solid fa-clock"></i>
         </button>
     </div>
 @endif
