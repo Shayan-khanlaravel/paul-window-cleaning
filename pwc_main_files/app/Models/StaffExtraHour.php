@@ -17,6 +17,8 @@ class StaffExtraHour extends Model
         'service_date',
         'start_time',
         'end_time',
+        'rate_type',
+        'rate_amount',
         'duration_hours',
     ];
 

@@ -61,6 +61,7 @@ class StaffExtraHoursController extends Controller
             'service_date' => 'required|date|after_or_equal:week_start_date|before_or_equal:week_end_date',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
+            'rate_type' => 'required|in:normal,training',
         ]);
 
         if (!$this->routeIsAssignedToStaff($validated['route_id'], auth()->id())) {
@@ -79,6 +80,11 @@ class StaffExtraHoursController extends Controller
 
         $durationHours = round($end->diffInMinutes($start) / 60, 2);
 
+        $profile = auth()->user()->profile;
+        $rateAmount = $validated['rate_type'] === 'training'
+            ? $profile?->training_rate
+            : $profile?->normal_rate;
+
         $entry = StaffExtraHour::create([
             'staff_id' => auth()->id(),
             'route_id' => $validated['route_id'],
@@ -87,6 +93,8 @@ class StaffExtraHoursController extends Controller
             'service_date' => $validated['service_date'],
             'start_time' => $validated['start_time'] . ':00',
             'end_time' => $validated['end_time'] . ':00',
+            'rate_type' => $validated['rate_type'],
+            'rate_amount' => $rateAmount,
             'duration_hours' => $durationHours,
         ]);
 
@@ -124,6 +132,9 @@ class StaffExtraHoursController extends Controller
             'service_date' => $serviceDate->format('Y-m-d'),
             'start_time' => Carbon::parse($entry->start_time)->format('g:i A'),
             'end_time' => Carbon::parse($entry->end_time)->format('g:i A'),
+            'rate_type' => $entry->rate_type,
+            'rate_type_label' => ucfirst($entry->rate_type),
+            'rate_amount' => $entry->rate_amount !== null ? (float) $entry->rate_amount : null,
             'duration_hours' => (float) $entry->duration_hours,
             'duration_label' => $this->formatDurationLabel((float) $entry->duration_hours),
         ];

@@ -1274,6 +1274,17 @@
                                         <label for="extra_hours_end_time">End Time *</label>
                                     </div>
                                 </div>
+                                <div class="col-md-12">
+                                    <label class="form-label d-block">Rate Type *</label>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="rate_type" id="extra_hours_rate_normal" value="normal" checked>
+                                        <label class="form-check-label" for="extra_hours_rate_normal">Normal</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="rate_type" id="extra_hours_rate_training" value="training">
+                                        <label class="form-check-label" for="extra_hours_rate_training">Training</label>
+                                    </div>
+                                </div>
                             </div>
                             <p id="extraHoursFormError" class="text-danger mt-2 mb-0" style="display: none;"></p>
                             <div class="mt-3">
@@ -1300,12 +1311,13 @@
                                         <th>Day</th>
                                         <th>Start Time</th>
                                         <th>End Time</th>
+                                        <th>Rate Type</th>
                                         <th>Duration</th>
                                     </tr>
                                 </thead>
                                 <tbody id="extraHoursTableBody">
                                     <tr id="extraHoursEmptyRow">
-                                        <td colspan="4" class="text-center text-muted">No extra hours added yet.</td>
+                                        <td colspan="5" class="text-center text-muted">No extra hours added yet.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -2977,7 +2989,7 @@
 
                     if (!entries || entries.length === 0) {
                         extraHoursTableBody.append(
-                            '<tr id="extraHoursEmptyRow"><td colspan="4" class="text-center text-muted">No extra hours added yet.</td></tr>'
+                            '<tr id="extraHoursEmptyRow"><td colspan="5" class="text-center text-muted">No extra hours added yet.</td></tr>'
                         );
                     } else {
                         entries.forEach(function(entry) {
@@ -2986,6 +2998,7 @@
                                     <td>${entry.day}</td>
                                     <td>${entry.start_time}</td>
                                     <td>${entry.end_time}</td>
+                                    <td>${entry.rate_type_label}</td>
                                     <td>${entry.duration_label}</td>
                                 </tr>
                             `);
@@ -3068,6 +3081,7 @@
                                 $('#extra_hours_start_time').val('');
                                 $('#extra_hours_end_time').val('');
                                 extraHoursDay.val('');
+                                $('#extra_hours_rate_normal').prop('checked', true);
 
                                 Swal.fire({
                                     icon: 'success',
