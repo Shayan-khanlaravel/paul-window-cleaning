@@ -51,6 +51,7 @@
                                     <th class="min-w-100px">Total Gross Sales</th>
                                     <th class="min-w-100px">Total Commission</th>
                                     <th class="min-w-100px">Total Bonus</th>
+                                    <th class="min-w-100px">Extra Hours Pay</th>
                                     <th class="min-w-100px text-end rounded-end">Total Gross Pay</th>
                                     <th>Actions</th>
                                 </tr>
@@ -75,6 +76,9 @@
                                     </td>
                                     <td>
                                         <span class="text-muted fw-semibold text-muted d-block fs-7">${{ number_format($staff->bonus, 2) }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted fw-semibold text-muted d-block fs-7">${{ number_format($staff->extra_hours_amount, 2) }}</span>
                                     </td>
                                     <td>
                                         <span class="text-dark fw-bold d-block fs-7 text-end">${{ number_format($staff->total_gross, 2) }}</span>

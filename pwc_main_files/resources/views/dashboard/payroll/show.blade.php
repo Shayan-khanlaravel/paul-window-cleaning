@@ -54,6 +54,10 @@
                                     <th class="min-w-100px text-end">Gross Sales</th>
                                     <th class="min-w-100px text-end">Gross Commission</th>
                                     <th class="min-w-150px text-end">Bonus</th>
+                                    <th class="min-w-100px text-end">Normal Extra Hours</th>
+                                    <th class="min-w-100px text-end">Training Extra Hours</th>
+                                    <th class="min-w-100px text-end">Total Extra Hours</th>
+                                    <th class="min-w-100px text-end">Extra Hours Amount</th>
                                     <th class="min-w-100px text-end rounded-end">Total Gross Pay</th>
                                 </tr>
                             </thead>
@@ -87,21 +91,36 @@
                                         <span class="text-muted fw-semibold d-block fs-7">${{ number_format($routeData['bonus'], 2) }}</span>
                                         @endif
                                     </td>
+                                    <td class="text-end">
+                                        <span class="text-muted fw-semibold text-muted d-block fs-7">{{ number_format($routeData['normal_hours'], 2) }} hrs</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="text-muted fw-semibold text-muted d-block fs-7">{{ number_format($routeData['training_hours'], 2) }} hrs</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="text-muted fw-semibold text-muted d-block fs-7">{{ number_format($routeData['extra_hours_total'], 2) }} hrs</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="text-muted fw-semibold text-muted d-block fs-7">${{ number_format($routeData['extra_hours_amount'], 2) }}</span>
+                                    </td>
                                     <td class="text-end pe-4">
                                         <span class="text-dark fw-bold d-block fs-7">${{ number_format($routeData['total_gross_pay'], 2) }}</span>
                                     </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td class="text-center text-muted py-4">No route-based payroll records found for this period.</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
+                                    <td class="text-center text-muted py-4" colspan="9">No route-based payroll records found for this period.</td>
                                 </tr>
                                 @endforelse
                             </tbody>
+                            @if($routePayrollData->isNotEmpty())
+                            <tfoot>
+                                <tr>
+                                    <td colspan="8" class="ps-4 text-end fw-bold">Grand Total Payroll</td>
+                                    <td class="text-end pe-4 fw-bold">${{ number_format($grandTotalPay, 2) }}</td>
+                                </tr>
+                            </tfoot>
+                            @endif
                         </table>
                     </div>
                 </div>
