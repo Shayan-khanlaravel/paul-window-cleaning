@@ -3962,7 +3962,7 @@ class WebsiteController extends Controller
                     $omitSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->option ?? '') == 'omit');
                     $omitRich = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
                     if ($omitSchedules->isEmpty()) {
-                        $unpaidRich->createText('-');
+                        $omitRich->createText('-');
                     } else {
                     $firstOmit = true;
                     foreach ($omitSchedules as $schedule) {
@@ -3979,7 +3979,7 @@ class WebsiteController extends Controller
                     $partialSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->option ?? '') == 'partially');
                     $partialRich = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
                     if ($partialSchedules->isEmpty()) {
-                        $unpaidRich->createText('-');
+                        $partialRich->createText('-');
                     } else {
                     $firstPartial = true;
                     foreach ($partialSchedules as $schedule) {
