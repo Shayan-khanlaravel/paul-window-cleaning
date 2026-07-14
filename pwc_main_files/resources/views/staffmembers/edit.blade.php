@@ -112,7 +112,7 @@
                                     <div class="col-md-6">
                                         <div class="form-floating txt_field input_wrapper">
                                             <input type="password" class="form-control pass_log" name="password"
-                                                id="password" placeholder="">
+                                                id="password" placeholder="" autocomplete="new-password">
                                             <label for="password">New Password (Leave blank to keep current)</label>
                                             <i class="fa-solid input_icon fa-eye"></i>
                                             <i class="fa-solid input_icon fa-eye-slash"></i>
@@ -123,7 +123,7 @@
                                     <div class="col-md-6">
                                         <div class="form-floating txt_field input_wrapper">
                                             <input type="password" class="form-control pass_log" name="confirm_password"
-                                                id="confirm_password" placeholder="">
+                                                id="confirm_password" placeholder="" autocomplete="new-password">
                                             <label for="con_password">Confirm Password</label>
                                             <i class="fa-solid input_icon fa-eye"></i>
                                             <i class="fa-solid input_icon fa-eye-slash"></i>
