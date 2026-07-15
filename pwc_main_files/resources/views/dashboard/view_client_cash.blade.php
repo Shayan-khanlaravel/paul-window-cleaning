@@ -14,7 +14,6 @@
 
 @endsection
 @section('content')
-
     <section class="create_clients_sec_staff">
         <div class="container-fluid custom_container">
             <div class="row">
@@ -51,15 +50,15 @@
                                                 <div class="custom_radio">
                                                     <input
                                                         class="form-check-input completed_but_did_not_class complete_no_change check_uncheck check_show_hide"
-                                                        name="option" type="checkbox" value="noPayment"
+                                                        name="option" type="checkbox" value="no_payment"
                                                         id="recievedPayment" disabled
-                                                        @if($clientSchedule->clientSchedulePayment->option == 'noPayment') checked
+                                                        @if($clientSchedule->clientSchedulePayment->option == 'no_payment') checked
                                                         @endif>
                                                     <label class="form-check-label" for="recievedPayment">Completed
                                                         but did not receive payment</label>
                                                 </div>
                                                 <div class="row reason_input_fileds_wrapper"
-                                                     @if($clientSchedule->clientSchedulePayment->option != 'noPayment') hidden
+                                                     @if($clientSchedule->clientSchedulePayment->option != 'no_payment') hidden
                                                     @endif>
                                                     <div class="col-md-12">
                                                         <div class="txt_field">
