@@ -5,7 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/pwc_main_files/app" isTestSource="false" packagePrefix="App\" />
       <sourceFolder url="file://$MODULE_DIR$/pwc_main_files/database/factories" isTestSource="false" packagePrefix="Database\Factories\" />
       <sourceFolder url="file://$MODULE_DIR$/pwc_main_files/database/seeders" isTestSource="false" packagePrefix="Database\Seeders\" />
-      <sourceFolder url="file://$MODULE_DIR$/pwc_main_files/tests" isTestSource="true" packagePrefix="Tests\" />
+      <sourceFolder url="file://$MODULE_DIR$/pwc_main_files/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/pwc_main_files/tests/Feature" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/pwc_main_files/tests/Unit" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/spec" isTestSource="true" />
@@ -148,6 +148,10 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/guzzlehttp/promises" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/guzzlehttp/psr7" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/ralouphie/getallheaders" />
+      <excludeFolder url="file://$MODULE_DIR$/pwc_main_files/vendor/maennchen/zipstream-php" />
+      <excludeFolder url="file://$MODULE_DIR$/pwc_main_files/vendor/markbaker/complex" />
+      <excludeFolder url="file://$MODULE_DIR$/pwc_main_files/vendor/markbaker/matrix" />
+      <excludeFolder url="file://$MODULE_DIR$/pwc_main_files/vendor/phpoffice/phpspreadsheet" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

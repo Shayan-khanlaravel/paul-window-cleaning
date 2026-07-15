@@ -288,6 +288,16 @@
                                     </a>
                                 </div>
                             </div>
+                            <div class="menu-item">
+                                <div class="menu-content">
+                                    <a href="{{ url('route_report') }}"
+                                        class="nav_list @if (request()->is('route_report*')) active @endif"
+                                        aria-current="page">
+                                        <div class="sidebar_icon"><i class="fa-solid fa-chart-line"></i></div>
+                                        Routes Reports
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     @elseif(auth()->user()->hasRole('admin'))
                         <div class="menu-item ">

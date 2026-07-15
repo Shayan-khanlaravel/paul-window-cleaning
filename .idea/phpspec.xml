@@ -17,6 +17,9 @@
       <PhpSpecSuiteConfiguration>
         <option name="myPath" value="$PROJECT_DIR$/pwc_main_files" />
       </PhpSpecSuiteConfiguration>
+      <PhpSpecSuiteConfiguration>
+        <option name="myPath" value="$PROJECT_DIR$/pwc_main_files" />
+      </PhpSpecSuiteConfiguration>
     </suites>
   </component>
 </project>

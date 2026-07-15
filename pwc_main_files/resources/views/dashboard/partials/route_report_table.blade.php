@@ -1,3 +1,6 @@
+@php
+    $isAdminReportView = auth()->user()->hasRole('admin');
+@endphp
 @foreach ($data as $weekName => $weekRoutes)
     @php
         // 1. Setup Week Context - Extract only the week number from "Week 1 | 02 February - 08 February"
@@ -17,7 +20,7 @@
     @endphp
 
     <tr style="background-color: #f8f9fa; font-weight: bold; border:1px solid black !important;">
-        <td colspan="4">
+        <td colspan="{{ $isAdminReportView ? 4 : 3 }}">
             <h3 class="m-0">{{ $weekName }}</h3>
         </td>
         <td colspan="5" class="text-end" style="padding-right:20px">
@@ -29,14 +32,16 @@
 
     @if ($weekRoutes->isEmpty())
         <tr>
-            <td colspan="9" class="text-center text-muted">No Schedule To This Week</td>
+            <td colspan="{{ $isAdminReportView ? 9 : 8 }}" class="text-center text-muted">No Schedule To This Week</td>
         </tr>
     @else
         @foreach ($weekRoutes as $routeId => $schedules)
             @php
                 // --- ROUTE CALCULATIONS ---
                 $routeName = $schedules->first()->clientName->clientRouteStaff->first()->route->name ?? 'N/A';
-                $staffName = $schedules->first()->StaffName->first_name ?? 'N/A';
+               $staffName = $schedules->first()?->StaffName?->first_name
+                            ?? $schedules->first()?->StaffName?->name
+                            ?? 'N/A';
 
                 // Total Sales
                 $totalSales = $schedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
@@ -51,6 +56,7 @@
 
                 // Invoice Logic
                 $invoiceSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'invoice');
+                $invoiceTotal = $invoiceSchedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
                 $invoicePaid = $invoiceSchedules->filter(fn($s) => ($s->clientSchedulePayment->payment_status ?? null) == 'paid')->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
                 $invoiceUnpaid = $invoiceSchedules->filter(fn($s) => ($s->clientSchedulePayment->payment_status ?? null) === null)->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
 
@@ -72,7 +78,9 @@
 
             <tr class="route-invoice">
                 <td>{{ $routeName }}</td>
-                <td>{{ $staffName }}</td>
+                @if ($isAdminReportView)
+                    <td>{{ $staffName }}</td>
+                @endif
 
                 <td>
                     <div class="table_hover">
@@ -152,12 +160,18 @@
                 {{-- Billed Column (Cash Received + Invoice Paid) --}}
                 <td>
                     <div class="table_hover">
-                        <h3 class="billed-amount">{{ number_format($billed, 2) }}</h3>
+                        <h3>{{ number_format($invoiceTotal, 2) }}</h3>
                         <div class="tooltip_hover">
                             <ul>
-                                <li><strong>Cash Received:</strong> {{ number_format($totalDeposited, 2) }}</li>
-                                <li><strong>Invoice Paid:</strong> {{ number_format($invoicePaid, 2) }}</li>
-                                <li><strong>Total Billed:</strong> {{ number_format($billed, 2) }}</li>
+                                @forelse ($schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'invoice') as $s)
+                                    <li>
+                                        <span>{{ $s->clientName->name ?? 'Client' }}</span>
+                                        <span>${{ number_format($s->clientSchedulePayment->final_price ?? 0, 2) }}</span>
+                                    </li>
+                                @empty
+                                    <li style="justify-content: center; color: #858585;">
+                                        No Cash Records</li>
+                                @endforelse
                             </ul>
                         </div>
                     </div>

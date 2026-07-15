@@ -161,43 +161,43 @@ class WebsiteController extends Controller
             ->when(Auth::user()->hasRole('staff'), function ($query) use ($myAssignRoutes) {
                 return $query->whereIn('id', $myAssignRoutes);
             })->get()->map(function ($route) use ($currentWeekStart, $currentWeekEnd) {
-            $weekSchedules = $route->clientRoute->flatMap(function ($clientRoute) use ($currentWeekStart, $currentWeekEnd) {
-                return $clientRoute->clientSchedule->filter(function ($clientSchedule) use ($currentWeekStart, $currentWeekEnd) {
-                    $scheduleStartDate = Carbon::parse($clientSchedule->start_date);
-                    $scheduleEndDate = Carbon::parse($clientSchedule->end_date);
-                    $serviceFrequency = optional($clientSchedule->clientName)->service_frequency;
+                $weekSchedules = $route->clientRoute->flatMap(function ($clientRoute) use ($currentWeekStart, $currentWeekEnd) {
+                    return $clientRoute->clientSchedule->filter(function ($clientSchedule) use ($currentWeekStart, $currentWeekEnd) {
+                        $scheduleStartDate = Carbon::parse($clientSchedule->start_date);
+                        $scheduleEndDate = Carbon::parse($clientSchedule->end_date);
+                        $serviceFrequency = optional($clientSchedule->clientName)->service_frequency;
 
-                    if ($serviceFrequency == 'monthly' || $serviceFrequency == 'biMonthly') {
-                        $scheduleDay = $scheduleStartDate->day;
-                        $scheduleMonth = $scheduleStartDate->month;
-                        $scheduleYear = $scheduleStartDate->year;
+                        if ($serviceFrequency == 'monthly' || $serviceFrequency == 'biMonthly') {
+                            $scheduleDay = $scheduleStartDate->day;
+                            $scheduleMonth = $scheduleStartDate->month;
+                            $scheduleYear = $scheduleStartDate->year;
 
-                        for ($d = $currentWeekStart->copy(); $d->lte($currentWeekEnd); $d->addDay()) {
-                            if ($d->day == $scheduleDay && $d->month == $scheduleMonth && $d->year == $scheduleYear) {
-                                return true;
+                            for ($d = $currentWeekStart->copy(); $d->lte($currentWeekEnd); $d->addDay()) {
+                                if ($d->day == $scheduleDay && $d->month == $scheduleMonth && $d->year == $scheduleYear) {
+                                    return true;
+                                }
                             }
+                            return false;
                         }
-                        return false;
-                    }
 
-                    return ($scheduleStartDate->gte($currentWeekStart) && $scheduleStartDate->lte($currentWeekEnd)) ||
-                        ($scheduleEndDate->gte($currentWeekStart) && $scheduleEndDate->lte($currentWeekEnd)) ||
-                        ($scheduleStartDate->lte($currentWeekStart) && $scheduleEndDate->gte($currentWeekEnd));
+                        return ($scheduleStartDate->gte($currentWeekStart) && $scheduleStartDate->lte($currentWeekEnd)) ||
+                            ($scheduleEndDate->gte($currentWeekStart) && $scheduleEndDate->lte($currentWeekEnd)) ||
+                            ($scheduleStartDate->lte($currentWeekStart) && $scheduleEndDate->gte($currentWeekEnd));
+                    });
                 });
+
+                $route->jobs_pending = $weekSchedules->filter(function ($schedule) {
+                    return empty($schedule->status) || $schedule->status === 'pending';
+                })->count();
+
+                $route->jobs_total = $weekSchedules->count();
+
+                $route->jobs_completed = $weekSchedules->filter(function ($schedule) {
+                    return !empty($schedule->status) && $schedule->status === 'completed';
+                })->count();
+
+                return $route;
             });
-
-            $route->jobs_pending = $weekSchedules->filter(function ($schedule) {
-                return empty($schedule->status) || $schedule->status === 'pending';
-            })->count();
-
-            $route->jobs_total = $weekSchedules->count();
-
-            $route->jobs_completed = $weekSchedules->filter(function ($schedule) {
-                return !empty($schedule->status) && $schedule->status === 'completed';
-            })->count();
-
-            return $route;
-        });
 
         $weekNumber = $currentWeek['week_number'];
         $startOfWeek = $currentWeekStart->format('d');
@@ -280,15 +280,47 @@ class WebsiteController extends Controller
         return view('dashboard.notification', compact('notificationsss'));
     }
 
+    /**
+     * Route IDs a non-admin (staff) user is allowed to see in the route report.
+     * Returns null for admins, meaning "no restriction".
+     */
+    private function routeReportAllowedRouteIds()
+    {
+        $user = auth()->user();
+
+        if (!$user || $user->hasRole('admin')) {
+            return null;
+        }
+
+        return AssignRoute::where('staff_id', $user->id)->pluck('route_id')->toArray();
+    }
+
     public function routeReport(Request $request)
     {
-        $routes = StaffRoute::where('status', 1)->get();
-        $staffs = User::role('staff')->get();
-        // return $staffs;
+        $allowedRouteIds = $this->routeReportAllowedRouteIds();
+
+        $routesQuery = StaffRoute::where('status', 1);
+        if ($allowedRouteIds !== null) {
+            $routesQuery->whereIn('id', $allowedRouteIds);
+        }
+        $routes = $routesQuery->get();
+
+        $staffs = $allowedRouteIds === null ? User::role('staff')->get() : collect([auth()->user()]);
 
         // Get filter values
         $selectedRouteId = $request->input('route');
         $selectedStaffId = $request->input('staff');
+
+        if ($allowedRouteIds !== null) {
+            if ($selectedRouteId && !in_array($selectedRouteId, $allowedRouteIds)) {
+                // Ignore attempts to view a route not assigned to this staff member
+                $selectedRouteId = null;
+            }
+            if ($selectedStaffId && $selectedStaffId != auth()->id()) {
+                // Staff can only filter down to themselves, not other staff
+                $selectedStaffId = null;
+            }
+        }
 
         $currentYear = now()->year;
         $currentMonth = now()->format('F');
@@ -349,6 +381,10 @@ class WebsiteController extends Controller
             $query->whereHas('clientName.clientRouteStaff', function ($q) use ($selectedRouteId) {
                 $q->where('route_id', $selectedRouteId);
             });
+        } elseif ($allowedRouteIds !== null) {
+            $query->whereHas('clientName.clientRouteStaff', function ($q) use ($allowedRouteIds) {
+                $q->whereIn('route_id', $allowedRouteIds);
+            });
         }
         if ($selectedStaffId) {
             $query->where('staff_id', $selectedStaffId);
@@ -407,15 +443,27 @@ class WebsiteController extends Controller
             $nextMonthName = $monthNames[0];
             $nextMonth = $nextMonthName . ' ' . ($selectedYear + 1);
         }
-
         return view('dashboard.route_report', compact('routes', 'staffs', 'data', 'allDeposits', 'allClientPayments', 'allTimelogs', 'months', 'selectedMonth', 'previousMonth', 'nextMonth', 'selectedRouteId', 'selectedStaffId'));
     }
 
     public function routeReportAjax(Request $request)
     {
+        $allowedRouteIds = $this->routeReportAllowedRouteIds();
+
         $selectedRouteId = $request->input('route');
         $selectedStaffId = $request->input('staff');
         $selectedMonth = $request->input('month');
+
+        if ($allowedRouteIds !== null) {
+            if ($selectedRouteId && !in_array($selectedRouteId, $allowedRouteIds)) {
+                // Ignore attempts to view a route not assigned to this staff member
+                $selectedRouteId = null;
+            }
+            if ($selectedStaffId && $selectedStaffId != auth()->id()) {
+                // Staff can only filter down to themselves, not other staff
+                $selectedStaffId = null;
+            }
+        }
 
         $currentYear = now()->year;
         preg_match('/\d{4}/', $selectedMonth, $yearMatch);
@@ -474,6 +522,10 @@ class WebsiteController extends Controller
         if ($selectedRouteId) {
             $query->whereHas('clientName.clientRouteStaff', function ($q) use ($selectedRouteId) {
                 $q->where('route_id', $selectedRouteId);
+            });
+        } elseif ($allowedRouteIds !== null) {
+            $query->whereHas('clientName.clientRouteStaff', function ($q) use ($allowedRouteIds) {
+                $q->whereIn('route_id', $allowedRouteIds);
             });
         }
 
@@ -552,11 +604,24 @@ class WebsiteController extends Controller
 
     public function routeReportExport(Request $request)
     {
+        $allowedRouteIds = $this->routeReportAllowedRouteIds();
+
         $selectedRouteId = $request->input('route');
         $selectedStaffId = $request->input('staff');
         $selectedMonth = $request->input('month');
         $weekNum = $request->input('week'); // null for all weeks, or specific week number
         $exportType = $request->input('type', 'single'); // 'single' or 'all'
+
+        if ($allowedRouteIds !== null) {
+            if ($selectedRouteId && !in_array($selectedRouteId, $allowedRouteIds)) {
+                // Ignore attempts to export a route not assigned to this staff member
+                $selectedRouteId = null;
+            }
+            if ($selectedStaffId && $selectedStaffId != auth()->id()) {
+                // Staff can only filter down to themselves, not other staff
+                $selectedStaffId = null;
+            }
+        }
 
         \Log::info('========== ROUTE REPORT EXPORT START ==========');
         \Log::info('Request Parameters:', $request->all());
@@ -621,6 +686,10 @@ class WebsiteController extends Controller
         if ($selectedRouteId) {
             $query->whereHas('clientName.clientRouteStaff', function ($q) use ($selectedRouteId) {
                 $q->where('route_id', $selectedRouteId);
+            });
+        } elseif ($allowedRouteIds !== null) {
+            $query->whereHas('clientName.clientRouteStaff', function ($q) use ($allowedRouteIds) {
+                $q->whereIn('route_id', $allowedRouteIds);
             });
         }
 
@@ -878,8 +947,8 @@ class WebsiteController extends Controller
     {
         $client = Client::with(['clientSchedule.clientSchedulePrice.clientPaymentPrice' ,
             'clientPrice' => function ($query) {
-            $query->orderBy('position', 'asc');
-        }])->findOrFail($id);
+                $query->orderBy('position', 'asc');
+            }])->findOrFail($id);
 
         $start_week_date = $request->query('start_date');
         $end_week_date = $request->query('end_date');
@@ -3910,9 +3979,9 @@ class WebsiteController extends Controller
                     if ($billedSchedules->isEmpty()) {
                         $billedRich->createText('-');
                     } else {
-                    $firstBilled = true;
-                    foreach ($billedSchedules as $schedule) {
-                        if (!$firstBilled) $billedRich->createText("\n");
+                        $firstBilled = true;
+                        foreach ($billedSchedules as $schedule) {
+                            if (!$firstBilled) $billedRich->createText("\n");
                             $firstBilled = false;
                             $clientName = $schedule->clientName->name ?? 'Unknown';
                             $scope = $schedule->clientSchedulePrice
@@ -3938,7 +4007,7 @@ class WebsiteController extends Controller
                     if ($unpaidSchedules->isEmpty()) {
                         $unpaidRich->createText('-');
                     } else {
-                    $firstUnpaid = true;
+                        $firstUnpaid = true;
                         foreach ($unpaidSchedules as $schedule) {
                             if (!$firstUnpaid) $unpaidRich->createText("\n");
                             $firstUnpaid = false;
@@ -3956,15 +4025,15 @@ class WebsiteController extends Controller
                     if ($omitSchedules->isEmpty()) {
                         $omitRich->createText('-');
                     } else {
-                    $firstOmit = true;
-                    foreach ($omitSchedules as $schedule) {
-                        if (!$firstOmit) $omitRich->createText("\n\n");
-                        $firstOmit = false;
-                        $clientName = $schedule->clientName->name ?? 'Unknown';
-                        $reason = $schedule->clientSchedulePayment->reason ?? '';
+                        $firstOmit = true;
+                        foreach ($omitSchedules as $schedule) {
+                            if (!$firstOmit) $omitRich->createText("\n\n");
+                            $firstOmit = false;
+                            $clientName = $schedule->clientName->name ?? 'Unknown';
+                            $reason = $schedule->clientSchedulePayment->reason ?? '';
 
-                        $nameRun = $omitRich->createTextRun($clientName . ": " . $reason);
-                    }
+                            $nameRun = $omitRich->createTextRun($clientName . ": " . $reason);
+                        }
                     }
 
                     // Partial breakdown: Client names (bold) + amount (normal) + Partial Scope label (bold) + scope text (not bold)
@@ -3973,20 +4042,20 @@ class WebsiteController extends Controller
                     if ($partialSchedules->isEmpty()) {
                         $partialRich->createText('-');
                     } else {
-                    $firstPartial = true;
-                    foreach ($partialSchedules as $schedule) {
-                        if (!$firstPartial) $partialRich->createText("\n\n");
-                        $firstPartial = false;
-                        $clientName = $schedule->clientName->name ?? 'Unknown';
-                        $scope = $schedule->clientSchedulePayment->partial_completed_scope ?? '';
-                        $amount = $schedule->clientSchedulePayment->final_price ?? 0;
+                        $firstPartial = true;
+                        foreach ($partialSchedules as $schedule) {
+                            if (!$firstPartial) $partialRich->createText("\n\n");
+                            $firstPartial = false;
+                            $clientName = $schedule->clientName->name ?? 'Unknown';
+                            $scope = $schedule->clientSchedulePayment->partial_completed_scope ?? '';
+                            $amount = $schedule->clientSchedulePayment->final_price ?? 0;
 
-                        $nameRun = $partialRich->createTextRun(
-                            $scope ? "$clientName ($scope): " : "$clientName: "
-                        );
-                        $amount = $schedule->clientSchedulePayment->final_price ?? 0;
-                        $partialRich->createText(number_format($amount, 2));
-                    }
+                            $nameRun = $partialRich->createTextRun(
+                                $scope ? "$clientName ($scope): " : "$clientName: "
+                            );
+                            $amount = $schedule->clientSchedulePayment->final_price ?? 0;
+                            $partialRich->createText(number_format($amount, 2));
+                        }
                     }
 
                     // Write row data

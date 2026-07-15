@@ -263,6 +263,9 @@
     </div>
 @endsection
 @section('content')
+    @php
+        $isAdminReportView = auth()->user()->hasRole('admin');
+    @endphp
     <section class="client_management staff_manag route_report_section">
         <div class="container-fluid custom_container">
             <div class="row">
@@ -338,7 +341,9 @@
                                     <thead>
                                         <tr>
                                             <th>Route</th>
-                                            <th>Staff Name</th>
+                                            @if ($isAdminReportView)
+                                                <th>Staff Name</th>
+                                            @endif
                                             <th>Total Sales</th>
                                             <th>Cash Received</th>
                                             <th>HRs</th>
@@ -364,7 +369,7 @@
                                             @endphp
 
                                             <tr style="background-color: #f8f9fa; font-weight: bold; border:1px solid black !important;">
-                                                <td colspan="4">
+                                                <td colspan="{{ $isAdminReportView ? 4 : 3 }}">
                                                     <h3>{{ $weekLabel }}</h3>
                                                 </td>
                                                 <td colspan="5" class="text-end" style="padding-right:20px">
@@ -376,7 +381,7 @@
 
                                             @if ($weekRoutes->isEmpty())
                                                 <tr>
-                                                    <td colspan="9" class="text-center text-muted">No Schedule To This
+                                                    <td colspan="{{ $isAdminReportView ? 9 : 8 }}" class="text-center text-muted">No Schedule To This
                                                         Week
                                                     </td>
                                                 </tr>
@@ -415,8 +420,9 @@
                                                     @endphp
                                                     <tr class="route-invoice">
                                                         <td>{{ $routeName }}</td>
-{{--                                                        <td>{{ $schedule->first()->StaffName->first_name ?? 'N/A' }}</td>--}}
-                                                        <td>{{ $staffName }}</td>
+                                                        @if ($isAdminReportView)
+                                                            <td>{{ $staffName }}</td>
+                                                        @endif
                                                         {{-- Total Sales Column with Tooltip --}}
                                                         <td>
                                                             <div class="table_hover">
@@ -625,7 +631,7 @@
                 // Show loading state
                 $('.route_report_table tbody').html(`
                     <tr>
-                        <td colspan="9" class="text-center" style="padding: 50px;">
+                        <td colspan="{{ $isAdminReportView ? 9 : 8 }}" class="text-center" style="padding: 50px;">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
@@ -691,7 +697,7 @@
                     error: function(xhr) {
                         $('.route_report_table tbody').html(`
                             <tr>
-                                <td colspan="9" class="text-center text-danger" style="padding: 50px;">
+                                <td colspan="{{ $isAdminReportView ? 9 : 8 }}" class="text-center text-danger" style="padding: 50px;">
                                     <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
                                     <p>Error loading data. Please try again.</p>
                                 </td>
