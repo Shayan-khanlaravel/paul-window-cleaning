@@ -1785,14 +1785,6 @@
                             monthData.forEach(weekData => {
                                 let weeklyCashTotal = 0;
                                 let weeklyInvoiceTotal = 0;
-
-                                // weekData.routes.forEach(route => {
-                                //     if (route.Pay.toLowerCase() === 'cash') {
-                                //         weeklyCashTotal += parseFloat(route.Amount);
-                                //     } else if (route.Pay.toLowerCase() === 'invoice') {
-                                //         weeklyInvoiceTotal += parseFloat(route.Amount);
-                                //     }
-                                // });
                                 weekData.routes.forEach(route => {
 
                                     const payType = (route.Pay || route.Cash || '').toString().toLowerCase();
@@ -1855,7 +1847,13 @@
                                         payType === 'cash' ? `$${parseFloat(route.Amount).toFixed(2)}` : "$0.00",
                                         payType === 'invoice' ? `$${parseFloat(route.Amount).toFixed(2)}` : "$0.00",
                                         route.Service,
-                                        route.Note + (route.Time ? `${route.Time}` : ""),
+                                        [
+                                            route.Note && `Note: ${route.Note}`,
+                                            route.Time && `Best Time: ${route.Time}`,
+                                            route["Close Days"] && `Close Days: ${route["Close Days"]}`,
+                                        ]
+                                            .filter(Boolean)
+                                            .join(" / ")
                                     ]);
                                 });
 
@@ -1894,13 +1892,13 @@
                         // ── Column Widths ────────────────────────────────────
                         // const colWidths = [20, 20, 16, 7, 7, 35, 35];
                         const colWidths = [
-                            20,
+                            18,
                             14,
                             10,
-                            10,
-                            10,
-                            45,
-                            35
+                            6,
+                            6,
+                            26,
+                            45
                         ];
                         ws['!cols'] = colWidths.map(width => ({
                             wch: width
@@ -1923,7 +1921,7 @@
                         const headerStyle = {
                             font: {
                                 bold: true,
-                                sz: 11,
+                                sz: 9,
                                 color: {
                                     rgb: "FFFFFF"
                                 }
@@ -1968,6 +1966,9 @@
 
                         // Alternating — light grey
                         const lightGreyStyle = {
+                            font: {
+                                sz: 9
+                            },
                             fill: {
                                 fgColor: {
                                     rgb: "F5F5F5"
@@ -1982,6 +1983,9 @@
 
                         // Alternating — white
                         const whiteStyle = {
+                            font: {
+                                sz: 9
+                            },
                             alignment: {
                                 wrapText: true,
                                 vertical: "top",
@@ -1993,7 +1997,7 @@
                         const totalRowStyle = {
                             font: {
                                 bold: true,
-                                sz: 10
+                                sz: 9
                             },
                             fill: {
                                 fgColor: {

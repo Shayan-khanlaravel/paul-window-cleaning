@@ -468,7 +468,9 @@ class StaffRoutesController extends Controller
                 $query->whereHas('clients', function ($q) {
                     $q->where('status', 1);
                 })->with([
-                    'clientSchedule.clientSchedulePrice.clientPaymentPrice'
+                    'clientSchedule.clientSchedulePrice.clientPaymentPrice',
+                    'clientSchedule.clientName.clientHour',
+                    'clientSchedule.clientName.clientDay'
                 ]);
             }
         ])->findOrFail($id);
@@ -519,16 +521,6 @@ class StaffRoutesController extends Controller
         ];
 
         $exportData = [];
-
-        //        $currentMonthIndex = $months->search($selectedMonth);
-        //
-        //        $upcomingMonths = $months->slice($currentMonthIndex, 5);
-        //        $upcomingMonths->prepend($selectedMonth);
-        //
-        //        foreach ($upcomingMonths as $month) {
-        //            $monthData = $this->getMonthData($month, $staffRoute, $customStartDates);
-        //            $exportData[] = $monthData;
-        //        }
 
         $monthData = $this->getMonthData($selectedMonth, $staffRoute, $customStartDates);
         $exportData['data'][] = $monthData['data'];
@@ -613,6 +605,7 @@ class StaffRoutesController extends Controller
                     $amount        = $mergedData['amount'];
                     $servicesArray = $mergedData['prices'];
                     $displayNote   = $mergedData['note'];
+                    $client = $firstSchedule->clientName;
 
                     $servicesString = '';
                     if (!empty($servicesArray)) {
@@ -622,21 +615,20 @@ class StaffRoutesController extends Controller
 //                            ->implode(', ');
                             ->implode("\n");
                     }
+                    // Best Time
+                    $bestTime = $client?->clientHour
+                        ?->map(function ($time) {
+                            return trim(($time->start_hour ?? '') . ' - ' . ($time->end_hour ?? ''));
+                        })
+                        ->filter()
+                        ->implode(', ');
 
-//                    return [
-//                        'Client Name' => optional($firstSchedule->clientName)->name ?? 'N/A',
-//                        'Pay'         => ucfirst(strtolower(optional($firstSchedule->clientName)->payment_type ?? 'N/A')),
-//                        'Amount'      => $amount,
-//                        'Service'     => $servicesString,
-//                        'Address'     => trim(
-//                            (optional($firstSchedule->clientName)->house_no ?? '') . ' ' .
-//                                (optional($firstSchedule->clientName)->address  ?? '') . ' ' .
-//                                (optional($firstSchedule->clientName)->state    ?? '') . ' ' .
-//                        ),
-//                        'City'        => optional($firstSchedule->clientName)->city    ?? 'N/A',
-//                        'Note'        => $displayNote,
-//                        'position'    => optional($firstSchedule->clientName)->position,
-//                    ];
+                    // Close Days
+                    $closeDays = $client?->clientDay
+                        ?->pluck('day')
+                        ->filter()
+                        ->implode(', ');
+
                     return [
                         'Client Name' => optional($firstSchedule->clientName)->name ?? 'N/A',
                         'Cash'        => ucfirst(strtolower(optional($firstSchedule->clientName)->payment_type ?? 'N/A')),
@@ -647,11 +639,12 @@ class StaffRoutesController extends Controller
                             (optional($firstSchedule->clientName)->address ?? '') . ' ' .
                             (optional($firstSchedule->clientName)->state ?? '')
                         ),
-
                         'City'        => optional($firstSchedule->clientName)->city ?? 'N/A',
                         'Note'        => $displayNote,
                         'Billed'      => $amount,
                         'position'    => optional($firstSchedule->clientName)->position,
+                        'Time'        => $bestTime ?: '',
+                        'Close Days'  => $closeDays ?: '',
                     ];
                 })->values();
             });
@@ -707,7 +700,7 @@ class StaffRoutesController extends Controller
                 foreach ($sch->clientSchedulePrice as $sp) {
                     $val = (float)(optional($sp->clientPaymentPrice)->value ?? 0);
                     $mergedMultiPrice[] = [
-                        'name'  => optional($sp->clientPaymentPrice)->name,
+                        'name'  => $this->normalizePriceName(optional($sp->clientPaymentPrice)->name),
                         'value' => $val,
                     ];
                     $mergedInvoiceAmount += $val;
@@ -722,7 +715,7 @@ class StaffRoutesController extends Controller
                     foreach ($names as $idx => $name) {
                         $val = (float)($values[$idx] ?? 0);
                         $mergedMultiPrice[] = [
-                            'name'  => $name,
+                            'name'  => $this->normalizePriceName($name),
                             'value' => $val,
                         ];
                         $mergedInvoiceAmount += $val;
@@ -732,13 +725,33 @@ class StaffRoutesController extends Controller
         }
 
         $mergedNotes = array_unique($mergedNotes);
-        $displayNote = !empty($mergedNotes) ? implode(', ', $mergedNotes) : null;
+        $displayNote = !empty($mergedNotes) ? implode(', ', $mergedNotes) : 'a';
 
         return [
             'note'   => $displayNote,
             'prices' => $mergedMultiPrice,
             'amount' => $mergedInvoiceAmount,
         ];
+    }
+
+    private function normalizePriceName($name)
+    {
+        if (empty($name)) {
+            return $name;
+        }
+
+        $patterns = [
+            '/interior\s*(&|and)\s*exterior/i' => 'ie',
+            '/\binterior\b/i' => 'i',
+            '/\bexterior\b/i' => 'e',
+        ];
+
+        $result = $name;
+        foreach ($patterns as $pattern => $replacement) {
+            $result = preg_replace($pattern, $replacement, $result);
+        }
+
+        return $result;
     }
 
     public function toggleStatus($id)

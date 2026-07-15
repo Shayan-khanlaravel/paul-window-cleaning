@@ -250,14 +250,14 @@
                                     Clients
                                 </a>
                             </div>
-                            <div class="menu-content">
-                                <a href="{{ url('timelogs') }}"
-                                    class="nav_list @if (request()->is('timelogs*')) active @endif"
-                                    aria-current="page">
-                                    <div class="sidebar_icon"><i class="fa-solid fa-clock"></i></div>
-                                    Time Log
-                                </a>
-                            </div>
+{{--                            <div class="menu-content">--}}
+{{--                                <a href="{{ url('timelogs') }}"--}}
+{{--                                    class="nav_list @if (request()->is('timelogs*')) active @endif"--}}
+{{--                                    aria-current="page">--}}
+{{--                                    <div class="sidebar_icon"><i class="fa-solid fa-clock"></i></div>--}}
+{{--                                    Time Log--}}
+{{--                                </a>--}}
+{{--                            </div>--}}
                             <div class="menu-item ">
                                 <div class="menu-content">
                                     <a href="{{ url('deposits') }}"
@@ -407,16 +407,16 @@
                             </div>
                         </div>
 
-                        <div class="menu-item ">
-                            <div class="menu-content">
-                                <a href="{{ url('timelogs') }}"
-                                    class="nav_list @if (request()->is('timelogs')) active @endif"
-                                    aria-current="page">
-                                    <div class="sidebar_icon"><i class="fa-solid fa-clock"></i></div>
-                                    Time Log
-                                </a>
-                            </div>
-                        </div>
+{{--                        <div class="menu-item ">--}}
+{{--                            <div class="menu-content">--}}
+{{--                                <a href="{{ url('timelogs') }}"--}}
+{{--                                    class="nav_list @if (request()->is('timelogs')) active @endif"--}}
+{{--                                    aria-current="page">--}}
+{{--                                    <div class="sidebar_icon"><i class="fa-solid fa-clock"></i></div>--}}
+{{--                                    Time Log--}}
+{{--                                </a>--}}
+{{--                            </div>--}}
+{{--                        </div>--}}
                         <div class="menu-item ">
                             <div class="menu-content">
                                 <a href="{{ url('contacts') }}"
