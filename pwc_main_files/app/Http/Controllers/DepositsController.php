@@ -871,6 +871,7 @@ class DepositsController extends Controller
             'clientSchedule.clientName.clientRouteStaff.route',
             'client.clientRouteStaff.route',
         ])
+            ->where('option', '!=', 'omit')
             ->where('payment_type', 'cash')
             ->where('status', 'paid')
             ->where('staff_id', $staffId)
