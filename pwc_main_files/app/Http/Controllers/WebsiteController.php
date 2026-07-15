@@ -3896,23 +3896,15 @@ class WebsiteController extends Controller
                         $nameRun->getFont()->setBold(true);
                         $cashRecordRich->createText('0');
                     } else {
-                        $first = true;
-                        foreach ($cashSchedules as $schedule) {
-                            if (!$first) {
-                                $cashRecordRich->createText("\n");
-                            }
-                            $first = false;
-                            $amount = $schedule->clientSchedulePayment->final_price ?? 0;
-                            $nameRun = $cashRecordRich->createTextRun('$ ');
-                            $nameRun->getFont()->setBold(true);
-                            $cashRecordRich->createText(number_format($amount, 2));
-                        }
+                        $nameRun = $cashRecordRich->createTextRun('$ ');
+                        $nameRun->getFont()->setBold(true);
+                        $cashRecordRich->createText(number_format($cashRecord, 2));
                     }
 
                     // Billed breakdown: Client Name (Scope) (bold) + Price (not bold), one client per line
                     $billedSchedules = $schedules->filter(function ($s) {
                         $payment = $s->clientSchedulePayment;
-                        return ($payment->payment_type ?? '') == 'cash';
+                        return ($payment->payment_type ?? '') == 'invoice';
                     });
                     $billedRich = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
                     if ($billedSchedules->isEmpty()) {
@@ -3939,8 +3931,8 @@ class WebsiteController extends Controller
                     // Unpaid breakdown: Client Name (bold) + Unpaid Amount (not bold), one client per line
                     $unpaidSchedules = $schedules->filter(function ($s) {
                         $payment = $s->clientSchedulePayment;
-                        return ($payment->payment_type ?? '') == 'invoice'
-                            && ($payment->payment_status ?? null) === null;
+                        return ($payment->payment_type ?? '') == 'cash'
+                            && ($payment->status ?? '') == 'pending';
                     });
                     $unpaidRich = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
                     if ($unpaidSchedules->isEmpty()) {
@@ -3950,7 +3942,7 @@ class WebsiteController extends Controller
                         foreach ($unpaidSchedules as $schedule) {
                             if (!$firstUnpaid) $unpaidRich->createText("\n");
                             $firstUnpaid = false;
-                            $clientName = $schedule->clientName->user->name ?? 'Unknown';
+                            $clientName = $schedule->clientName->name ?? 'Unknown';
                             $amount = $schedule->clientSchedulePayment->final_price ?? 0;
 
                             $nameRun = $unpaidRich->createTextRun($clientName . ": ");

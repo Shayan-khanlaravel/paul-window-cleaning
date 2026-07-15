@@ -340,10 +340,10 @@
                                             <th>Route</th>
                                             <th>Staff Name</th>
                                             <th>Total Sales</th>
-                                            <th>Cash Record</th>
+                                            <th>Cash Received</th>
                                             <th>HRs</th>
                                             <th>Billed</th>
-                                            <th>Unpaid</th>
+                                            <th>Unpaid Accounts</th>
                                             <th>Omit</th>
                                             <th>Partial</th>
                                         </tr>
@@ -356,11 +356,11 @@
                                                 preg_match('/Week\s+(\d+)/', $weekName, $weekMatches);
                                                 $currentWeekNum = isset($weekMatches[1]) ? (int) $weekMatches[1] : 1;
                                                 $dbWeekNum = $currentWeekNum - 1;
- 
+
                                                 preg_match('/\d{4}/', $selectedMonth ?? '', $yearMatch);
                                                 $selectedYear = $yearMatch[0] ?? now()->year;
- 
-                                                $selectedMonthName = trim(str_replace($selectedYear, '', $selectedMonth ?? '')); 
+
+                                                $selectedMonthName = trim(str_replace($selectedYear, '', $selectedMonth ?? ''));
                                             @endphp
 
                                             <tr style="background-color: #f8f9fa; font-weight: bold; border:1px solid black !important;">
@@ -408,10 +408,15 @@
                                                                 $totalHours += $endTime->diffInMinutes($startTime) / 60;
                                                             }
                                                         }
+                                                         $staffName =
+                                                            $schedules->first()?->StaffName?->first_name
+                                                            ?? $schedules->first()?->StaffName?->name
+                                                            ?? 'N/A';
                                                     @endphp
                                                     <tr class="route-invoice">
                                                         <td>{{ $routeName }}</td>
-                                                        <td>{{ $schedules->first()->StaffName->first_name ?? 'N/A' }}</td>
+{{--                                                        <td>{{ $schedule->first()->StaffName->first_name ?? 'N/A' }}</td>--}}
+                                                        <td>{{ $staffName }}</td>
                                                         {{-- Total Sales Column with Tooltip --}}
                                                         <td>
                                                             <div class="table_hover">
@@ -494,15 +499,18 @@
                                                         {{-- Billed Column (Cash Received + Invoice Paid) --}}
                                                         <td>
                                                             <div class="table_hover">
-                                                                <h3>{{ number_format($billed, 2) }}</h3>
+                                                                <h3>{{ number_format($invoiceTotal, 2) }}</h3>
                                                                 <div class="tooltip_hover">
                                                                     <ul>
-                                                                        <li><strong>Cash Received:</strong>
-                                                                            {{ number_format($totalDeposited, 2) }}</li>
-                                                                        <li><strong>Invoice Paid:</strong>
-                                                                            {{ number_format($invoicePaid, 2) }}</li>
-                                                                        <li><strong>Total Billed:</strong>
-                                                                            {{ number_format($billed, 2) }}</li>
+                                                                        @forelse ($schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'invoice') as $s)
+                                                                            <li>
+                                                                                <span>{{ $s->clientName->name ?? 'Client' }}</span>
+                                                                                <span>${{ number_format($s->clientSchedulePayment->final_price ?? 0, 2) }}</span>
+                                                                            </li>
+                                                                        @empty
+                                                                            <li style="justify-content: center; color: #858585;">
+                                                                                No Cash Records</li>
+                                                                        @endforelse
                                                                     </ul>
                                                                 </div>
                                                             </div>
