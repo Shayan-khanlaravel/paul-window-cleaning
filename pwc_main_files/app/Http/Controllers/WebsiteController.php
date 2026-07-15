@@ -4020,6 +4020,12 @@ class WebsiteController extends Controller
                     $sheet->setCellValue("I$rowIndex", $partialRich);
                     $sheet->getStyle("I$rowIndex")->getAlignment()->setWrapText(true);
 
+                    // Align all cells in this row to the top (rows grow tall due to
+                    // wrapped multi-line rich text, and the default vertical
+                    // alignment is bottom, which pushes content down)
+                    $sheet->getStyle("A$rowIndex:I$rowIndex")->getAlignment()
+                        ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP);
+
                     $rowIndex++;
                 }
             } else {
