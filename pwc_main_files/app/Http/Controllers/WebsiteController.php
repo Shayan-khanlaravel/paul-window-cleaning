@@ -245,7 +245,7 @@ class WebsiteController extends Controller
                 })
                 ->count();
         }
-//dd($totalUnPaids);
+
         return view('dashboard.dashboard_index', [
             'staffRoute' => $staffRoute,
             'currentMonth' => $currentMonthName,

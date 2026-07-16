@@ -253,12 +253,16 @@
                                             <div class="jobs_icon_wrapper">
                                                 <div>
                                                     <div>
-                                                        <label>Jobs Pending</label>
-                                                        <span>{{ $staffroute->jobs_pending ?? 0 }}</span>
+                                                        <label>Jobs Scheduled:</label>
+                                                        <span>{{ $staffroute->jobs_total ?? 0 }}</span>
                                                     </div>
                                                     <div>
                                                         <label>Jobs Completed:</label>
                                                         <span>{{ $staffroute->jobs_completed ?? 0 }}</span>
+                                                    </div>
+                                                    <div>
+                                                        <label>Jobs Pending</label>
+                                                        <span>{{ $staffroute->jobs_pending ?? 0 }}</span>
                                                     </div>
                                                 </div>
                                                 <a href="{{ route('staffroutes.show', [$staffroute->id]) }}">

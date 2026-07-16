@@ -30,12 +30,13 @@ class StaffRoutesController extends Controller
 
         $user = auth()->user();
 
-        // 2. Dates and Weeks logic (as before)
         $currentYear = now()->year;
         $currentMonth = now()->format('F');
-        $nextMonth = now()->addMonthNoOverflow()->format('F');
-        $baseMonthName = "$currentMonth - $nextMonth";
-        $firstMondayOfYear = \Carbon\Carbon::parse("first Monday of January $currentYear");
+        $nextMonth = now()->addMonth()->format('F');
+
+        $selectedYear = $currentYear;
+
+        $firstMondayOfYear = Carbon::parse("first Monday of January $selectedYear");
 
         $customStartDates = [
             "January - February" => $firstMondayOfYear->copy()->addDays(0),
@@ -52,24 +53,43 @@ class StaffRoutesController extends Controller
             "November - December" => $firstMondayOfYear->copy()->addWeeks(44),
             "December - January" => $firstMondayOfYear->copy()->addWeeks(48),
         ];
+        $todayDate = Carbon::now();
 
-        $monthStartDate = $customStartDates[$baseMonthName] ?? $firstMondayOfYear;
+        $baseMonthName = null;
+        foreach ($customStartDates as $range => $startDate) {
+            if ($todayDate->gte($startDate) && $todayDate->lt($startDate->copy()->addWeeks(4))) {
+                $baseMonthName = $range;
+                break;
+            }
+        }
+
+        if (!array_key_exists($baseMonthName, $customStartDates)) {
+            $baseMonthName = "January - February";
+            $selectedYear = $currentYear;
+        }
+
+        $monthStartDate = $customStartDates[$baseMonthName];
 
         $weeks = collect();
-        $tempDate = $monthStartDate->copy();
+        $firstDayOfMonth = $monthStartDate->copy();
+
         for ($i = 0; $i < 4; $i++) {
+            $weekStart = $firstDayOfMonth->copy();
+            $weekEnd = $firstDayOfMonth->copy()->addDays(6);
+
             $weeks->push([
-                'start_date' => $tempDate->copy(),
-                'end_date' => $tempDate->copy()->addDays(6),
+                'week_number' => $i + 1,
+                'start_date' => $weekStart,
+                'end_date' => $weekEnd,
             ]);
-            $tempDate->addDays(7);
+
+            $firstDayOfMonth->addDays(7);
         }
 
         $today = \Carbon\Carbon::now();
         $currentWeek = $weeks->first(fn($w) => $today->between($w['start_date'], $w['end_date'])) ?: $weeks->first();
         $currentWeekStart = $currentWeek['start_date'];
         $currentWeekEnd = $currentWeek['end_date'];
-
         // 3. MAIN QUERY WITH STRICT AUTH CHECK
         $query = StaffRoute::with([
             'clientRoute' => function ($q) {
@@ -110,9 +130,15 @@ class StaffRoutesController extends Controller
                 });
             });
 
-            $route->jobs_pending = $weekSchedules->filter(fn($s) => empty($s->status) || $s->status === 'pending')->count();
+            $route->jobs_pending = $weekSchedules->filter(function ($schedule) {
+                return empty($schedule->status) || $schedule->status === 'pending';
+            })->count();
+
             $route->jobs_total = $weekSchedules->count();
-            $route->jobs_completed = $weekSchedules->filter(fn($s) => $s->status === 'completed')->count();
+
+            $route->jobs_completed = $weekSchedules->filter(function ($schedule) {
+                return !empty($schedule->status) && $schedule->status === 'completed';
+            })->count();
 
             return $route;
         });
