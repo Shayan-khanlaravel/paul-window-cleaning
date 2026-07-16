@@ -1892,12 +1892,12 @@
                         // ── Column Widths ────────────────────────────────────
                         // const colWidths = [20, 20, 16, 7, 7, 35, 35];
                         const colWidths = [
-                            18,
+                            15,
                             14,
                             10,
                             6,
                             6,
-                            26,
+                            15,
                             45
                         ];
                         ws['!cols'] = colWidths.map(width => ({
