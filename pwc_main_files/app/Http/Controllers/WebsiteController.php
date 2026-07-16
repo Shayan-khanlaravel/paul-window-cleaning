@@ -203,7 +203,11 @@ class WebsiteController extends Controller
         $startOfWeek = $currentWeekStart->format('d');
         $endOfWeek = $currentWeekEnd->format('d');
 
-        $currentMonthName = $baseMonthName;
+        if ($currentWeekStart->format('F') === $currentWeekEnd->format('F')) {
+            $currentMonthName = $currentWeekStart->format('F'); // e.g. "July"
+        } else {
+            $currentMonthName = $currentWeekStart->format('F') . ' - ' . $currentWeekEnd->format('F'); // e.g. "June - July"
+        }
 
         $notifications = Notification::where('user_id', Auth::id())->get();
         if (auth()->user()->hasRole('admin')) {
