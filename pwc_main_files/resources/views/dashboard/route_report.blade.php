@@ -475,19 +475,19 @@
                                                         {{-- HRs Column (Total Hours from Staff Log Hours) --}}
                                                         <td>
                                                             <div class="table_hover">
-                                                                <h3>{{ number_format($totalHours, 2) }}</h3>
+                                                                <h3>{{ $totalHours }}</h3>
                                                                 @if ($staffLogHoursForRoute->count() > 0)
                                                                     <div class="tooltip_hover">
                                                                         <ul>
                                                                             @foreach ($staffLogHoursForRoute as $logEntry)
                                                                                 <li>
                                                                                     <span>{{ $logEntry->staff?->name ?? 'Staff' }}</span>
-                                                                                    <span>{{ number_format($logEntry->duration_hours, 2) }} hrs</span>
+                                                                                    <span>{{ $logEntry->duration_hours }} hrs</span>
                                                                                 </li>
                                                                             @endforeach
                                                                             <li style="border-top: 1px solid #ddd; margin-top: 5px; padding-top: 5px;">
                                                                                 <strong>Total Hours:</strong>
-                                                                                <strong>{{ number_format($totalHours, 2) }} hrs</strong>
+                                                                                <strong>{{ $totalHours }} hrs</strong>
                                                                             </li>
                                                                         </ul>
                                                                     </div>

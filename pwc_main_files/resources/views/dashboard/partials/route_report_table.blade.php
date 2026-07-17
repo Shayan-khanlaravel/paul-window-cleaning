@@ -47,7 +47,7 @@
                 $totalSales = $schedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
 
                 // Cash Logic
-                $cashSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash' && ($s->clientSchedulePayment->status ?? '') == 'pending');
+                $cashSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash' && ($s->clientSchedulePayment->status ?? '') == 'paid');
                 $cashRecord = $cashSchedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
 
                 // Deposits
@@ -137,19 +137,19 @@
 
                 <td>
                     <div class="table_hover">
-                        <h3>{{ number_format($totalHours, 2) }}</h3>
+                        <h3>{{ $totalHours }}</h3>
                         @if ($staffLogHoursForRoute->count() > 0)
                             <div class="tooltip_hover">
                                 <ul class="m-0 p-0" style="list-style: none;">
                                     @foreach ($staffLogHoursForRoute as $logEntry)
                                         <li style="display: flex; justify-content: space-between; padding: 4px 0;">
                                             <span>{{ $logEntry->staff?->name ?? 'Staff' }}:</span>
-                                            <span>{{ number_format($logEntry->duration_hours, 2) }} hrs</span>
+                                            <span>{{ $logEntry->duration_hours }} hrs</span>
                                         </li>
                                     @endforeach
                                     <li style="border-top: 1px solid #ddd; margin-top: 5px; padding-top: 5px; display: flex; justify-content: space-between;">
                                         <strong>Total:</strong>
-                                        <strong>{{ number_format($totalHours, 2) }} hrs</strong>
+                                        <strong>{{ $totalHours }} hrs</strong>
                                     </li>
                                 </ul>
                             </div>
