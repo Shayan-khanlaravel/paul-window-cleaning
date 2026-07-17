@@ -47,7 +47,7 @@
                 $totalSales = $schedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
 
                 // Cash Logic
-                $cashSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash');
+                $cashSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash' && ($s->clientSchedulePayment->status ?? '') == 'pending');
                 $cashRecord = $cashSchedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
 
                 // Deposits
@@ -59,6 +59,10 @@
                 $invoiceTotal = $invoiceSchedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
                 $invoicePaid = $invoiceSchedules->filter(fn($s) => ($s->clientSchedulePayment->payment_status ?? null) == 'paid')->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
                 $invoiceUnpaid = $invoiceSchedules->filter(fn($s) => ($s->clientSchedulePayment->payment_status ?? null) === null)->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
+
+                // Un Paid
+                $cashUnpaidAcc = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash' && ($s->clientSchedulePayment->status ?? '') == 'pending');
+                $unPaidTotal = $cashUnpaidAcc->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
 
                 // Totals
                 $billed = $totalDeposited + $invoicePaid;
@@ -156,7 +160,6 @@
                         @endif
                     </div>
                 </td>
-
                 {{-- Billed Column (Cash Received + Invoice Paid) --}}
                 <td>
                     <div class="table_hover">
@@ -178,25 +181,25 @@
                 </td>
 
                 {{-- Unpaid Column with Tooltip --}}
-                <td class="text-danger">
+                <td>
                     <div class="table_hover">
-                        <h3 style="background: rgba(220, 53, 69, 0.1); color: #dc3545;">{{ number_format($unpaid, 2) }}
-                        </h3>
+                        <h3>{{ number_format($unPaidTotal, 2) }}</h3>
                         <div class="tooltip_hover">
                             <ul>
-                                <li><strong>Cash Unpaid:</strong>
-                                    <span>${{ number_format($cashRecord - $totalDeposited, 2) }}</span>
-                                </li>
-                                <li><strong>Invoice Unpaid:</strong>
-                                    <span>${{ number_format($invoiceUnpaid, 2) }}</span>
-                                </li>
-                                <li style="border-top: 2px solid #dc3545; margin-top: 5px; padding-top: 8px;">
-                                    <strong>Total Unpaid:</strong> <span style="color: #dc3545; font-weight: bold;">${{ number_format($unpaid, 2) }}</span>
-                                </li>
+                                @forelse ($cashUnpaidAcc as $s)
+                                    <li>
+                                        <span>{{ $s->clientName->name ?? 'Client' }}</span>
+                                        <span>${{ number_format($s->clientSchedulePayment->final_price ?? 0, 2) }}</span>
+                                    </li>
+                                @empty
+                                    <li style="justify-content: center; color: #858585;">
+                                        No Cash Records</li>
+                                @endforelse
                             </ul>
                         </div>
                     </div>
                 </td>
+
 
                 {{-- Omit Column with Conditional Hover --}}
                 <td>

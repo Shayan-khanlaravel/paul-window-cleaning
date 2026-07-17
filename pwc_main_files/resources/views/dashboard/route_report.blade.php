@@ -390,7 +390,7 @@
                                                     @php
                                                         $routeName = $schedules->first()->clientName?->clientRouteStaff->first()->route->name ?? 'N/A';
                                                         $totalSales = $schedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
-                                                        $cashSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash');
+                                                        $cashSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash' && ($s->clientSchedulePayment->status ?? '') == 'paid');
                                                         $cashRecord = $cashSchedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
                                                         $weekString = 'week' . $dbWeekNum;
                                                         $matchingDeposits = $allDeposits->where('route_id', $routeId)->where('week', $weekString)->where('month', $selectedMonthName)->where('year', $selectedYear);
@@ -400,8 +400,8 @@
                                                         $invoicePaid = $invoiceSchedules->filter(fn($s) => ($s->clientSchedulePayment->payment_status ?? null) == 'paid')->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
                                                         $invoiceUnpaid = $invoiceSchedules->filter(fn($s) => ($s->clientSchedulePayment->payment_status ?? null) === null)->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
                                                         $billed = $totalDeposited + $invoicePaid;
-                                                        $cashUnpaid = $cashRecord - $totalDeposited;
-                                                        $unpaid = $cashUnpaid + $invoiceUnpaid;
+                                                        $cashUnpaidAcc = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash' && ($s->clientSchedulePayment->status ?? '') == 'pending');
+                                                        $unPaidTotal = $cashUnpaidAcc->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
 
                                                         // Calculate HRs from client_payments start_time and end_time
                                                         $totalHours = 0;
@@ -454,7 +454,7 @@
                                                                 <h3>{{ number_format($cashRecord, 2) }}</h3>
                                                                 <div class="tooltip_hover">
                                                                     <ul>
-                                                                        @forelse ($schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash') as $s)
+                                                                        @forelse ($cashSchedules as $s)
                                                                             <li>
                                                                                 <span>{{ $s->clientName->name ?? 'Client' }}</span>
                                                                                 <span>${{ number_format($s->clientSchedulePayment->final_price ?? 0, 2) }}</span>
@@ -522,21 +522,20 @@
                                                             </div>
                                                         </td>
                                                         {{-- Unpaid Column with Tooltip --}}
-                                                        <td class="text-danger">
+                                                        <td>
                                                             <div class="table_hover">
-                                                                <h3 style="background: rgba(220, 53, 69, 0.1); color: #dc3545;">
-                                                                    {{ number_format($unpaid, 2) }}</h3>
+                                                                <h3>{{ number_format($unPaidTotal, 2) }}</h3>
                                                                 <div class="tooltip_hover">
                                                                     <ul>
-                                                                        <li><strong>Cash Unpaid:</strong>
-                                                                            <span>${{ number_format($cashUnpaid, 2) }}</span>
-                                                                        </li>
-                                                                        <li><strong>Invoice Unpaid:</strong>
-                                                                            <span>${{ number_format($invoiceUnpaid, 2) }}</span>
-                                                                        </li>
-                                                                        <li style="border-top: 2px solid #dc3545; margin-top: 5px; padding-top: 8px;">
-                                                                            <strong>Total Unpaid:</strong> <span style="color: #dc3545; font-weight: bold;">${{ number_format($unpaid, 2) }}</span>
-                                                                        </li>
+                                                                        @forelse ($cashUnpaidAcc as $s)
+                                                                            <li>
+                                                                                <span>{{ $s->clientName->name ?? 'Client' }}</span>
+                                                                                <span>${{ number_format($s->clientSchedulePayment->final_price ?? 0, 2) }}</span>
+                                                                            </li>
+                                                                        @empty
+                                                                            <li style="justify-content: center; color: #858585;">
+                                                                                No Cash Records</li>
+                                                                        @endforelse
                                                                     </ul>
                                                                 </div>
                                                             </div>

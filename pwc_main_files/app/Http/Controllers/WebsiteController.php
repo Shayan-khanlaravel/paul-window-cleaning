@@ -3607,6 +3607,7 @@ class WebsiteController extends Controller
             'end_time' => $request->end_time ?? null,
             'staff_id' => auth()->user()->id,
             'status' => ($request->payment_type == "cash" && $request->option != 'no_payment') ? 'paid' : 'pending',
+            'payment_status' => ($request->payment_type == "cash" && $request->option != 'no_payment') ? 'paid' : 'pending',
         ]);
 
         $reorded = ClientSchedule::where('id', $request->schedule_id)->update([
@@ -3934,7 +3935,7 @@ class WebsiteController extends Controller
 
                     // Calculate summary values
                     $totalSales = $schedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
-                    $cashSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash');
+                    $cashSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash' && ($s->clientSchedulePayment->status ?? '') == 'paid');
                     $cashRecord = $cashSchedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
 
                     // Calculate HRs from client_payments start_time and end_time
