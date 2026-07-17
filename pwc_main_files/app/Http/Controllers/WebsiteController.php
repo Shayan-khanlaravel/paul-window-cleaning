@@ -399,6 +399,12 @@ class WebsiteController extends Controller
         $allClientPayments = ClientPayment::all();
         $allTimelogs = Timelog::all();
 
+        // Pre-fetch StaffLogHour records for this month's date range
+        $allStaffLogHours = \App\Models\StaffLogHour::with('staff')->whereBetween('week_start_date', [
+            $monthStartDate->format('Y-m-d'),
+            $monthEndDate->format('Y-m-d'),
+        ])->get();
+
         $cycleData = collect();
         foreach ($weeks as $week) {
             $weekLabel = 'Week ' . $week['week_number'] . ' | ' . $week['start_date']->format('d F') . ' - ' . $week['end_date']->format('d F');
@@ -447,7 +453,7 @@ class WebsiteController extends Controller
             $nextMonthName = $monthNames[0];
             $nextMonth = $nextMonthName . ' ' . ($selectedYear + 1);
         }
-        return view('dashboard.route_report', compact('routes', 'staffs', 'data', 'allDeposits', 'allClientPayments', 'allTimelogs', 'months', 'selectedMonth', 'previousMonth', 'nextMonth', 'selectedRouteId', 'selectedStaffId'));
+        return view('dashboard.route_report', compact('routes', 'staffs', 'data', 'allDeposits', 'allClientPayments', 'allTimelogs', 'allStaffLogHours', 'weeks', 'months', 'selectedMonth', 'previousMonth', 'nextMonth', 'selectedRouteId', 'selectedStaffId'));
     }
 
     public function routeReportAjax(Request $request)
@@ -543,6 +549,12 @@ class WebsiteController extends Controller
         $allClientPayments = ClientPayment::all();
         $allTimelogs = Timelog::all();
 
+        // Pre-fetch StaffLogHour records for this month's date range
+        $allStaffLogHours = \App\Models\StaffLogHour::with('staff')->whereBetween('week_start_date', [
+            $monthStartDate->format('Y-m-d'),
+            $monthEndDate->format('Y-m-d'),
+        ])->get();
+
         $cycleData = collect();
         foreach ($weeks as $week) {
             $weekLabel = 'Week ' . $week['week_number'] . ' | ' . $week['start_date']->format('d F') . ' - ' . $week['end_date']->format('d F');
@@ -594,7 +606,7 @@ class WebsiteController extends Controller
             $months[] = $monthName . ' ' . $selectedYear;
         }
 
-        $html = view('dashboard.partials.route_report_table', compact('data', 'allDeposits', 'allClientPayments', 'allTimelogs', 'selectedMonth'))->render();
+        $html = view('dashboard.partials.route_report_table', compact('data', 'allDeposits', 'allClientPayments', 'allTimelogs', 'allStaffLogHours', 'weeks', 'selectedMonth'))->render();
 
         return response()->json([
             'html' => $html,
@@ -706,6 +718,12 @@ class WebsiteController extends Controller
         $allDeposits = Deposit::all();
         $allTimelogs = Timelog::all();
 
+        // Pre-fetch StaffLogHour records for this month's date range
+        $allStaffLogHours = \App\Models\StaffLogHour::with('staff')->whereBetween('week_start_date', [
+            $monthStartDate->format('Y-m-d'),
+            $monthEndDate->format('Y-m-d'),
+        ])->get();
+
         // Group data by week
         $cycleData = collect();
         foreach ($weeks as $week) {
@@ -769,7 +787,7 @@ class WebsiteController extends Controller
         }
 
         // Generate Excel
-        return $this->generateExcelReport($data, $allDeposits, $allTimelogs, $selectedMonth, $selectedYear, $weekNum, $exportType, $baseMonthName);
+        return $this->generateExcelReport($data, $allDeposits, $allTimelogs, $allStaffLogHours, $weeks, $selectedMonth, $selectedYear, $weekNum, $exportType, $baseMonthName);
     }
 
 
@@ -3865,7 +3883,7 @@ class WebsiteController extends Controller
         return response()->json(['status' => 'success']);
     }
 
-    private function generateExcelReport($data, $allDeposits, $allTimelogs, $selectedMonth, $selectedYear, $weekNum, $exportType, $baseMonthName)
+    private function generateExcelReport($data, $allDeposits, $allTimelogs, $allStaffLogHours, $weeks, $selectedMonth, $selectedYear, $weekNum, $exportType, $baseMonthName)
     {
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -3931,23 +3949,28 @@ class WebsiteController extends Controller
                 foreach ($weekData as $routeId => $schedules) {
                     $routeName = $schedules->first()->clientName?->clientRouteStaff->first()->route->name ?? 'N/A';
                     $staffName = $schedules->first()?->StaffName?->name ?? 'N/A';
-                    $staffName = $staffName === 'N/A' ? 'N/A' : preg_replace('/^(\S+)\s+(\S).*/', '$1 $2', $staffName);
+                        $staffName = $staffName === 'N/A' ? 'N/A' : preg_replace('/^(\S+)\s+(\S).*/', '$1 $2', $staffName);
 
                     // Calculate summary values
                     $totalSales = $schedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
                     $cashSchedules = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash' && ($s->clientSchedulePayment->status ?? '') == 'paid');
                     $cashRecord = $cashSchedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
 
-                    // Calculate HRs from client_payments start_time and end_time
-                    $totalHours = 0;
-                    foreach ($schedules as $schedule) {
-                        $payment = $schedule->clientSchedulePayment;
-                        if ($payment && $payment->start_time && $payment->end_time) {
-                            $startTime = \Carbon\Carbon::parse($payment->start_time);
-                            $endTime = \Carbon\Carbon::parse($payment->end_time);
-                            $totalHours += $endTime->diffInMinutes($startTime) / 60;
+                    // Calculate HRs from Staff Log Hours (matched by route_id and week_start_date)
+                    $weekStartDate = null;
+                    foreach ($weeks as $week) {
+                        if ((int) $week['week_number'] === (int) $currentWeekNum) {
+                            $weekStartDate = $week['start_date']->format('Y-m-d');
+                            break;
                         }
                     }
+
+                    $totalHours = $allStaffLogHours
+                        ->where('route_id', $routeId)
+                        ->when($weekStartDate, fn($c) => $c->filter(
+                            fn($log) => \Carbon\Carbon::parse($log->week_start_date)->format('Y-m-d') === $weekStartDate
+                        ))
+                        ->sum('duration_hours');
 
                     // Build detailed breakdowns with client names using RichText for selective bold
 

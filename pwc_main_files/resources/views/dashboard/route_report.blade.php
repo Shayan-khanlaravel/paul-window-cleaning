@@ -403,16 +403,21 @@
                                                         $cashUnpaidAcc = $schedules->filter(fn($s) => ($s->clientSchedulePayment->payment_type ?? '') == 'cash' && ($s->clientSchedulePayment->status ?? '') == 'pending');
                                                         $unPaidTotal = $cashUnpaidAcc->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
 
-                                                        // Calculate HRs from client_payments start_time and end_time
-                                                        $totalHours = 0;
-                                                        foreach ($schedules as $schedule) {
-                                                            $payment = $schedule->clientSchedulePayment;
-                                                            if ($payment && $payment->start_time && $payment->end_time) {
-                                                                $startTime = \Carbon\Carbon::parse($payment->start_time);
-                                                                $endTime = \Carbon\Carbon::parse($payment->end_time);
-                                                                $totalHours += $endTime->diffInMinutes($startTime) / 60;
+                                                        // Calculate HRs from Staff Log Hours (matched by route_id and week_start_date)
+                                                        $currentWeekStartDate = null;
+                                                        foreach ($weeks as $week) {
+                                                            if ((int) $week['week_number'] === $currentWeekNum) {
+                                                                $currentWeekStartDate = $week['start_date']->format('Y-m-d');
+                                                                break;
                                                             }
                                                         }
+                                                        $staffLogHoursForRoute = $allStaffLogHours
+                                                            ->where('route_id', $routeId)
+                                                            ->when($currentWeekStartDate, fn($c) => $c->filter(
+                                                                fn($log) => \Carbon\Carbon::parse($log->week_start_date)->format('Y-m-d') === $currentWeekStartDate
+                                                            ));
+                                                        $totalHours = $staffLogHoursForRoute->sum('duration_hours');
+
                                                          $staffName =
                                                             $schedules->first()?->StaffName?->first_name
                                                             ?? $schedules->first()?->StaffName?->name
@@ -467,35 +472,22 @@
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        {{-- HRs Column (Total Hours from Timelogs) --}}
+                                                        {{-- HRs Column (Total Hours from Staff Log Hours) --}}
                                                         <td>
                                                             <div class="table_hover">
                                                                 <h3>{{ number_format($totalHours, 2) }}</h3>
-                                                                @if ($schedules->filter(fn($s) => $s->clientSchedulePayment && $s->clientSchedulePayment->start_time && $s->clientSchedulePayment->end_time)->count() > 0)
+                                                                @if ($staffLogHoursForRoute->count() > 0)
                                                                     <div class="tooltip_hover">
                                                                         <ul>
-                                                                            @foreach ($schedules as $schedule)
-                                                                                @php
-                                                                                    $payment = $schedule->clientSchedulePayment;
-                                                                                    if ($payment && $payment->start_time && $payment->end_time) {
-                                                                                        $start = \Carbon\Carbon::parse($payment->start_time);
-                                                                                        $end = \Carbon\Carbon::parse($payment->end_time);
-                                                                                        $hours = $end->diffInMinutes($start) / 60;
-                                                                                    } else {
-                                                                                        $hours = 0;
-                                                                                    }
-                                                                                @endphp
-                                                                                @if ($hours > 0)
-                                                                                    <li>
-                                                                                        <span>{{ $schedule->clientName->name ?? 'Client' }}</span>
-                                                                                        <span>{{ number_format($hours, 2) }} hrs</span>
-                                                                                    </li>
-                                                                                @endif
+                                                                            @foreach ($staffLogHoursForRoute as $logEntry)
+                                                                                <li>
+                                                                                    <span>{{ $logEntry->staff?->name ?? 'Staff' }}</span>
+                                                                                    <span>{{ number_format($logEntry->duration_hours, 2) }} hrs</span>
+                                                                                </li>
                                                                             @endforeach
                                                                             <li style="border-top: 1px solid #ddd; margin-top: 5px; padding-top: 5px;">
                                                                                 <strong>Total Hours:</strong>
-                                                                                <strong>{{ number_format($totalHours, 2) }}
-                                                                                    hrs</strong>
+                                                                                <strong>{{ number_format($totalHours, 2) }} hrs</strong>
                                                                             </li>
                                                                         </ul>
                                                                     </div>
