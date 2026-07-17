@@ -54,10 +54,7 @@
                                     <th class="min-w-100px text-end">Gross Sales</th>
                                     <th class="min-w-100px text-end">Gross Commission</th>
                                     <th class="min-w-150px text-end">Bonus</th>
-                                    <th class="min-w-100px text-end">Normal Extra Hours</th>
-                                    <th class="min-w-100px text-end">Training Extra Hours</th>
-                                    <th class="min-w-100px text-end">Total Extra Hours</th>
-                                    <th class="min-w-100px text-end">Extra Hours Amount</th>
+                                    <th class="min-w-150px text-end">Extra Hours</th>
                                     <th class="min-w-100px text-end rounded-end">Total Gross Pay</th>
                                 </tr>
                             </thead>
@@ -92,31 +89,33 @@
                                         @endif
                                     </td>
                                     <td class="text-end">
-                                        <span class="text-muted fw-semibold text-muted d-block fs-7">{{ number_format($routeData['normal_hours'], 2) }} hrs</span>
-                                    </td>
-                                    <td class="text-end">
-                                        <span class="text-muted fw-semibold text-muted d-block fs-7">{{ number_format($routeData['training_hours'], 2) }} hrs</span>
-                                    </td>
-                                    <td class="text-end">
-                                        <span class="text-muted fw-semibold text-muted d-block fs-7">{{ number_format($routeData['extra_hours_total'], 2) }} hrs</span>
-                                    </td>
-                                    <td class="text-end">
-                                        <span class="text-muted fw-semibold text-muted d-block fs-7">${{ number_format($routeData['extra_hours_amount'], 2) }}</span>
+                                        @if(auth()->user()->hasRole('admin'))
+                                        <button type="button"
+                                            class="btn btn-sm btn-outline-primary addExtraHoursBtn"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#extraHoursModal"
+                                            data-route-id="{{ $routeData['route_id'] }}"
+                                            data-route-name="{{ $routeData['route_name'] }}"
+                                            data-per-hour-amount="{{ $routeData['extra_hours_admin_per_hour'] }}"
+                                            data-total-extra-hours="{{ $routeData['extra_hours_admin_hours'] }}">
+                                            ${{ number_format($routeData['extra_hours_admin_amount'], 2) }}
+                                            <i class="fa-solid fa-pen ms-1"></i>
+                                        </button>
+                                        @else
+                                        <span class="text-muted fw-semibold d-block fs-7">${{ number_format($routeData['extra_hours_admin_amount'], 2) }}</span>
+                                        @endif
                                     </td>
                                     <td class="text-end pe-4">
                                         <span class="text-dark fw-bold d-block fs-7">${{ number_format($routeData['total_gross_pay'], 2) }}</span>
                                     </td>
                                 </tr>
                                 @empty
-                                <tr>
-                                    <td class="text-center text-muted py-4" colspan="9">No route-based payroll records found for this period.</td>
-                                </tr>
                                 @endforelse
                             </tbody>
                             @if($routePayrollData->isNotEmpty())
                             <tfoot>
                                 <tr>
-                                    <td colspan="8" class="ps-4 text-end fw-bold">Grand Total Payroll</td>
+                                    <td colspan="5" class="ps-4 text-end fw-bold">Grand Total Payroll</td>
                                     <td class="text-end pe-4 fw-bold">${{ number_format($grandTotalPay, 2) }}</td>
                                 </tr>
                             </tfoot>
@@ -129,4 +128,60 @@
 
     </div>
 </section>
+
+@if(auth()->user()->hasRole('admin'))
+<div class="modal fade" id="extraHoursModal" tabindex="-1" aria-labelledby="extraHoursModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ route('payroll.extra-hours.save', $staff->id) }}" method="POST" id="extraHoursForm">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="extraHoursModalLabel">Add Extra Hours <span class="extraHoursRouteName text-muted"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="route_id" id="extraHoursRouteId">
+                    <input type="hidden" name="period_start" value="{{ $start_date->format('Y-m-d') }}">
+                    <input type="hidden" name="period_end" value="{{ $end_date->format('Y-m-d') }}">
+
+                    <div class="mb-3">
+                        <label for="extraHoursPerHourAmount" class="form-label">Per Hour Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" step="0.01" min="0" class="form-control" name="per_hour_amount" id="extraHoursPerHourAmount" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="extraHoursTotalHours" class="form-label">Total Extra Hours</label>
+                        <input type="number" step="0.01" min="0" class="form-control" name="total_extra_hours" id="extraHoursTotalHours" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@push('js')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var extraHoursModal = document.getElementById('extraHoursModal');
+        if (!extraHoursModal) return;
+
+        extraHoursModal.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+
+            document.getElementById('extraHoursRouteId').value = btn.getAttribute('data-route-id');
+            document.getElementById('extraHoursPerHourAmount').value = btn.getAttribute('data-per-hour-amount');
+            document.getElementById('extraHoursTotalHours').value = btn.getAttribute('data-total-extra-hours');
+            extraHoursModal.querySelector('.extraHoursRouteName').textContent = '— ' + btn.getAttribute('data-route-name');
+        });
+    });
+</script>
+@endpush
+@endif
 @endsection

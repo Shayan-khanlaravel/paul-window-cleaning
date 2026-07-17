@@ -6,8 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\ClientSchedule;
 use App\Models\PayrollBonus;
-use App\Models\StaffLogHour;
-use App\Models\StaffRoute;
+use App\Models\PayrollExtraHour;
 use App\Support\PayrollPeriod;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -54,80 +53,17 @@ class PayrollController extends Controller
     }
 
     /**
-     * Sum extra hours (normal & training) for a staff member within the period
-     * and value them at that staff's profile rates.
+     * Admin-entered extra hours amount for a staff member within the period,
+     * summed across that staff's routes. payroll_extra_hours is scoped by
+     * staff_id + route_id + period, so this is a direct lookup - no need to
+     * re-derive "which routes belong to this staff" from schedules/assignments.
      */
-    private function extraHoursSummary(User $staff, Carbon $startDate, Carbon $endDate): array
+    private function extraHoursAdminAmountForStaff(User $staff, Carbon $startDate, Carbon $endDate): float
     {
-        $hoursByType = StaffLogHour::where('staff_id', $staff->id)
-            ->whereBetween('service_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-            ->selectRaw('rate_type, SUM(duration_hours) as total_hours')
-            ->groupBy('rate_type')
-            ->pluck('total_hours', 'rate_type');
-
-        $normalHours = (float) ($hoursByType['normal'] ?? 0);
-        $trainingHours = (float) ($hoursByType['training'] ?? 0);
-
-        $normalRate = (float) (optional($staff->profile)->normal_rate ?? 0);
-        $trainingRate = (float) (optional($staff->profile)->training_rate ?? 0);
-
-        $normalAmount = $normalHours * $normalRate;
-        $trainingAmount = $trainingHours * $trainingRate;
-
-        return [
-            'normal_hours'    => $normalHours,
-            'training_hours'  => $trainingHours,
-            'total_hours'     => $normalHours + $trainingHours,
-            'normal_amount'   => $normalAmount,
-            'training_amount' => $trainingAmount,
-            'total_amount'    => $normalAmount + $trainingAmount,
-        ];
-    }
-
-    /**
-     * Extra hours for a staff member within the period, grouped by route_id
-     * and valued at that staff's profile rates.
-     */
-    private function extraHoursByRoute(User $staff, Carbon $startDate, Carbon $endDate)
-    {
-        $normalRate = (float) (optional($staff->profile)->normal_rate ?? 0);
-        $trainingRate = (float) (optional($staff->profile)->training_rate ?? 0);
-
-        $rows = StaffLogHour::where('staff_id', $staff->id)
-            ->whereBetween('service_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
-            ->selectRaw('route_id, rate_type, SUM(duration_hours) as total_hours')
-            ->groupBy('route_id', 'rate_type')
-            ->get();
-
-        $byRoute = [];
-
-        foreach ($rows as $row) {
-            if (!isset($byRoute[$row->route_id])) {
-                $byRoute[$row->route_id] = [
-                    'normal_hours'    => 0,
-                    'training_hours'  => 0,
-                    'total_hours'     => 0,
-                    'normal_amount'   => 0,
-                    'training_amount' => 0,
-                    'total_amount'    => 0,
-                ];
-            }
-
-            $hours = (float) $row->total_hours;
-
-            if ($row->rate_type === 'training') {
-                $byRoute[$row->route_id]['training_hours'] += $hours;
-                $byRoute[$row->route_id]['training_amount'] += $hours * $trainingRate;
-            } else {
-                $byRoute[$row->route_id]['normal_hours'] += $hours;
-                $byRoute[$row->route_id]['normal_amount'] += $hours * $normalRate;
-            }
-
-            $byRoute[$row->route_id]['total_hours'] += $hours;
-            $byRoute[$row->route_id]['total_amount'] = $byRoute[$row->route_id]['normal_amount'] + $byRoute[$row->route_id]['training_amount'];
-        }
-
-        return $byRoute;
+        return (float) PayrollExtraHour::where('staff_id', $staff->id)
+            ->where('period_start', $startDate->format('Y-m-d'))
+            ->where('period_end', $endDate->format('Y-m-d'))
+            ->sum('total_extra_amount');
     }
 
     public function index(Request $request)
@@ -164,18 +100,18 @@ class PayrollController extends Controller
                 ->where('week_number', $half) // week_number column now stores the half (1 or 2)
                 ->sum('amount');
 
-            $extraHours = $this->extraHoursSummary($staff, $start_date, $end_date);
+            $extraHoursAdminAmount = $this->extraHoursAdminAmountForStaff($staff, $start_date, $end_date);
 
-            $totalGross = $commission + $bonus + $extraHours['total_amount'];
+            $totalGross = $commission + $bonus + $extraHoursAdminAmount;
 
             $staffData[] = (object) [
-                'id'                 => $staff->id,
-                'name'               => $staff->name,
-                'gross_sales'        => $grossSales,
-                'commission'         => $commission,
-                'bonus'              => $bonus,
-                'extra_hours_amount' => $extraHours['total_amount'],
-                'total_gross'        => $totalGross,
+                'id'                       => $staff->id,
+                'name'                     => $staff->name,
+                'gross_sales'              => $grossSales,
+                'commission'               => $commission,
+                'bonus'                    => $bonus,
+                'extra_hours_admin_amount' => $extraHoursAdminAmount,
+                'total_gross'              => $totalGross,
             ];
         }
 
@@ -240,40 +176,23 @@ class PayrollController extends Controller
             ->groupBy('route_id')
             ->pluck('total_bonus', 'route_id');
 
-        // Extra hours for this staff + period, grouped by route.
-        $extraHoursByRoute = $this->extraHoursByRoute($staff, $start_date, $end_date);
-
-        // Routes that only have extra hours in this period (no completed schedules) still need a row.
-        foreach ($extraHoursByRoute as $routeId => $extraHoursData) {
-            if (!isset($routePayrollData[$routeId])) {
-                $routeName = optional(StaffRoute::find($routeId))->name ?? 'Unassigned Route';
-
-                $routePayrollData[$routeId] = [
-                    'route_id'        => $routeId,
-                    'route_name'      => $routeName,
-                    'start'           => $start_date,
-                    'end'             => $end_date,
-                    'gross_sales'     => 0,
-                    'commission'      => 0,
-                    'bonus'           => 0,
-                    'total_gross_pay' => 0,
-                ];
-            }
-        }
+        // Admin-entered extra hours for this staff + period, grouped by route.
+        $extraHoursAdminByRoute = PayrollExtraHour::where('staff_id', $staff->id)
+            ->where('period_start', $start_date->format('Y-m-d'))
+            ->where('period_end', $end_date->format('Y-m-d'))
+            ->get()
+            ->keyBy('route_id');
 
         foreach ($routePayrollData as $routeId => $routeData) {
             $bonus = (float) ($bonusByRoute[$routeId] ?? 0);
-            $extraHoursData = $extraHoursByRoute[$routeId] ?? [
-                'normal_hours' => 0, 'training_hours' => 0, 'total_hours' => 0,
-                'normal_amount' => 0, 'training_amount' => 0, 'total_amount' => 0,
-            ];
+            $extraHoursAdmin = $extraHoursAdminByRoute[$routeId] ?? null;
 
-            $routePayrollData[$routeId]['bonus']              = $bonus;
-            $routePayrollData[$routeId]['normal_hours']       = $extraHoursData['normal_hours'];
-            $routePayrollData[$routeId]['training_hours']     = $extraHoursData['training_hours'];
-            $routePayrollData[$routeId]['extra_hours_total']  = $extraHoursData['total_hours'];
-            $routePayrollData[$routeId]['extra_hours_amount'] = $extraHoursData['total_amount'];
-            $routePayrollData[$routeId]['total_gross_pay']    = $routePayrollData[$routeId]['commission'] + $bonus + $extraHoursData['total_amount'];
+            $routePayrollData[$routeId]['bonus']                       = $bonus;
+            $routePayrollData[$routeId]['extra_hours_admin_per_hour']  = $extraHoursAdmin->per_hour_amount ?? 0;
+            $routePayrollData[$routeId]['extra_hours_admin_hours']     = $extraHoursAdmin->total_extra_hours ?? 0;
+            $routePayrollData[$routeId]['extra_hours_admin_amount']    = $extraHoursAdmin->total_extra_amount ?? 0;
+            $routePayrollData[$routeId]['total_gross_pay']    = $routePayrollData[$routeId]['commission'] + $bonus
+                + $routePayrollData[$routeId]['extra_hours_admin_amount'];
         }
 
         $routePayrollData = collect($routePayrollData)->sortBy('route_name')->values();
@@ -283,7 +202,7 @@ class PayrollController extends Controller
         return view('dashboard.payroll.show', compact(
             'staff', 'routePayrollData', 'selectedPeriod', 'selectedPeriodLabel',
             'periods', 'previousPeriod', 'nextPeriod', 'monthName', 'half', 'year',
-            'grandTotalPay'
+            'grandTotalPay', 'start_date', 'end_date'
         ));
     }
 
@@ -312,6 +231,38 @@ class PayrollController extends Controller
         $bonus->save();
 
         return back()->with('message', 'Bonus updated successfully');
+    }
+
+    public function saveExtraHours(Request $request, $id)
+    {
+        // Extra hours are admin-only. Staff can view amounts but cannot add/edit them.
+        abort_unless(Auth::user()->hasRole('admin'), 403);
+
+        $staff = User::findOrFail($id);
+
+        $request->validate([
+            'route_id'           => 'required|exists:staff_routes,id',
+            'period_start'       => 'required|date',
+            'period_end'         => 'required|date',
+            'per_hour_amount'    => 'required|numeric|min:0',
+            'total_extra_hours'  => 'required|numeric|min:0',
+        ]);
+
+        PayrollExtraHour::updateOrCreate(
+            [
+                'staff_id'     => $staff->id,
+                'route_id'     => $request->route_id,
+                'period_start' => $request->period_start,
+                'period_end'   => $request->period_end,
+            ],
+            [
+                'per_hour_amount'   => $request->per_hour_amount,
+                'total_extra_hours' => $request->total_extra_hours,
+                'created_by'        => Auth::id(),
+            ]
+        );
+
+        return back()->with('message', 'Extra hours updated successfully');
     }
 
     public function sendEmail(Request $request, $id)

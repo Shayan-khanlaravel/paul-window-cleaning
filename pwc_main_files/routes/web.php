@@ -105,6 +105,7 @@ Route::group(['middleware' => ['auth']], function () {
         Route::get('payroll', 'index')->name('payroll.index');
         Route::get('payroll/{id}', 'show')->name('payroll.show');
         Route::post('payroll/{id}/bonus', 'saveBonus')->name('payroll.bonus.save');
+        Route::post('payroll/{id}/extra-hours', 'saveExtraHours')->name('payroll.extra-hours.save');
         Route::post('payroll/{id}/email', 'sendEmail')->name('payroll.email');
     });
 

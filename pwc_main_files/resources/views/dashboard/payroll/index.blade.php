@@ -78,7 +78,7 @@
                                         <span class="text-muted fw-semibold text-muted d-block fs-7">${{ number_format($staff->bonus, 2) }}</span>
                                     </td>
                                     <td>
-                                        <span class="text-muted fw-semibold text-muted d-block fs-7">${{ number_format($staff->extra_hours_amount, 2) }}</span>
+                                        <span class="text-muted fw-semibold text-muted d-block fs-7">${{ number_format($staff->extra_hours_admin_amount, 2) }}</span>
                                     </td>
                                     <td>
                                         <span class="text-dark fw-bold d-block fs-7 text-end">${{ number_format($staff->total_gross, 2) }}</span>
