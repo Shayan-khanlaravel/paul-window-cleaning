@@ -430,5 +430,30 @@
                 window.history.back();
             });
         });
+
+        // Confirm before submitting payment
+        $(document).ready(function() {
+            $('.form-horizontal').on('submit', function(e) {
+                if (!$(this).data('confirmed')) {
+                    e.preventDefault();
+                    let form = this;
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: 'Please confirm you want to report this schedule.',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Submit',
+                        cancelButtonText: 'Cancel',
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $(form).data('confirmed', true);
+                            form.submit();
+                        }
+                    });
+                }
+            });
+        });
     </script>
 @endpush
