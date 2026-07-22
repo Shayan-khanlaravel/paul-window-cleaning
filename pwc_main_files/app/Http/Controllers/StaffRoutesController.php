@@ -184,25 +184,28 @@ class StaffRoutesController extends Controller
         ])->findOrFail($id);
 
         $currentYear     = now()->year;
-        $currentMonthNum = now()->month;
-
-        $monthPeriodMap = [
-            1  => "January - February",
-            2  => "February - March",
-            3  => "March",
-            4  => "March - April",
-            5  => "April - May",
-            6  => "May - June",
-            7  => "June - July",
-            8  => "July - August",
-            9  => "August - September",
-            10 => "September - October",
-            11 => "October - November",
-            12 => "November - December",
-        ];
-
-        $currentPeriod = $monthPeriodMap[$currentMonthNum];
-        $selectedMonth = $request->input('month', "$currentPeriod $currentYear");
+//        $currentMonthNum = now()->month;
+//
+//        $monthPeriodMap = [
+//            1  => "January - February",
+//            2  => "February - March",
+//            3  => "March",
+//            4  => "March - April",
+//            5  => "April - May",
+//            6  => "May - June",
+//            7  => "June - July",
+//            8  => "July - August",
+//            9  => "August - September",
+//            10 => "September - October",
+//            11 => "October - November",
+//            12 => "November - December",
+//        ];
+//
+//        $currentPeriod = $monthPeriodMap[$currentMonthNum];
+//        $selectedMonth = $request->input('month', "$currentPeriod $currentYear");
+        $currentMonth = now()->format('F');
+        $nextMonth = now()->addMonthNoOverflow()->format('F');
+        $selectedMonth = $request->input('month', "$currentMonth - $nextMonth $currentYear");
 
         preg_match('/\d{4}/', $selectedMonth, $yearMatch);
         $selectedYear = $yearMatch[0] ?? $currentYear;
