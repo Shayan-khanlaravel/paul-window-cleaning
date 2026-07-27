@@ -166,7 +166,7 @@
                                                 </div>
                                                 <div class="week_details_wrapper">
                                                     <div class="week_details_wrapper_total">
-                                                        <label>Expected Total Sales :</label>
+                                                        <label>Total Expected Sales :</label>
                                                         <span>${{ number_format($total, 2) }}</span>
                                                     </div>
                                                     <div>
@@ -605,7 +605,7 @@
                                                         </div>
                                                         <div class="week_details_wrapper">
                                                             <div class="week_details_wrapper_total">
-                                                                <label>Expected Total Sales :</label>
+                                                                <label>Total Expected Sales :</label>
                                                                 <span>${{ number_format($total, 2) }}</span>
                                                             </div>
                                                             <div>
@@ -1876,7 +1876,7 @@
                                     "",
                                     `$${weeklyCashTotal.toFixed(2)}`, // C column
                                     `$${weeklyInvoiceTotal.toFixed(2)}`, // I column
-                                    `Grand Total:`, // Scope column
+                                    `Total Expected Sales:`, // Scope column
                                     `$${weeklyTotal.toFixed(2)}`, // Note/Time column
                                 ]);
 
@@ -2091,6 +2091,21 @@
                                 hpt: 30
                             }; // ✅ Height badai
                         });
+
+                        // ── Print Setup — Landscape ──────────────────────────
+                        ws['!pageSetup'] = {
+                            orientation: 'landscape',
+                            fitToWidth: 1,
+                            fitToHeight: 0
+                        };
+                        ws['!margins'] = {
+                            left: 0.5,
+                            right: 0.5,
+                            top: 0.5,
+                            bottom: 0.5,
+                            header: 0.3,
+                            footer: 0.3
+                        };
 
                         // ── Export ───────────────────────────────────────────
                         let wb = XLSX.utils.book_new();

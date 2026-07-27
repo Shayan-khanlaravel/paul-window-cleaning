@@ -665,8 +665,7 @@ class StaffRoutesController extends Controller
                         'Service'       => $servicesString,
                         'Address'     => trim(
                             (optional($firstSchedule->clientName)->house_no ?? '') . ' ' .
-                            (optional($firstSchedule->clientName)->address ?? '') . ' ' .
-                            (optional($firstSchedule->clientName)->state ?? '')
+                            (optional($firstSchedule->clientName)->address ?? '')
                         ),
                         'City'        => optional($firstSchedule->clientName)->city ?? 'N/A',
                         'Note'        => $displayNote,
