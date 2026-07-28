@@ -165,34 +165,21 @@ class WebsiteController extends Controller
                     return $clientRoute->clientSchedule->filter(function ($clientSchedule) use ($currentWeekStart, $currentWeekEnd) {
                         $scheduleStartDate = Carbon::parse($clientSchedule->start_date);
                         $scheduleEndDate = Carbon::parse($clientSchedule->end_date);
-                        $serviceFrequency = optional($clientSchedule->clientName)->service_frequency;
 
-                        if ($serviceFrequency == 'monthly' || $serviceFrequency == 'biMonthly') {
-                            $scheduleDay = $scheduleStartDate->day;
-                            $scheduleMonth = $scheduleStartDate->month;
-                            $scheduleYear = $scheduleStartDate->year;
-
-                            for ($d = $currentWeekStart->copy(); $d->lte($currentWeekEnd); $d->addDay()) {
-                                if ($d->day == $scheduleDay && $d->month == $scheduleMonth && $d->year == $scheduleYear) {
-                                    return true;
-                                }
-                            }
-                            return false;
-                        }
-
-                        return ($scheduleStartDate->gte($currentWeekStart) && $scheduleStartDate->lte($currentWeekEnd)) ||
-                            ($scheduleEndDate->gte($currentWeekStart) && $scheduleEndDate->lte($currentWeekEnd)) ||
-                            ($scheduleStartDate->lte($currentWeekStart) && $scheduleEndDate->gte($currentWeekEnd));
+                        return ($scheduleStartDate <= $currentWeekEnd && $scheduleEndDate >= $currentWeekStart);
                     });
                 });
+                $grouped = $weekSchedules->groupBy(function ($clientSchedule) {
+                    return $clientSchedule->client_id . '_' . $clientSchedule->start_date;
+                });
 
-                $route->jobs_pending = $weekSchedules->filter(function ($schedule) {
+                $route->jobs_pending = $grouped->filter(function ($schedule) {
                     return empty($schedule->status) || $schedule->status === 'pending';
                 })->count();
 
-                $route->jobs_total = $weekSchedules->count();
+                $route->jobs_total = $grouped->count();
 
-                $route->jobs_completed = $weekSchedules->filter(function ($schedule) {
+                $route->jobs_completed = $grouped->filter(function ($schedule) {
                     return !empty($schedule->status) && $schedule->status === 'completed';
                 })->count();
 

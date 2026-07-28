@@ -130,13 +130,17 @@ class StaffRoutesController extends Controller
                 });
             });
 
-            $route->jobs_pending = $weekSchedules->filter(function ($schedule) {
+            $grouped = $weekSchedules->groupBy(function ($clientSchedule) {
+                return $clientSchedule->client_id . '_' . $clientSchedule->start_date;
+            });
+
+            $route->jobs_pending = $grouped->filter(function ($schedule) {
                 return empty($schedule->status) || $schedule->status === 'pending';
             })->count();
 
-            $route->jobs_total = $weekSchedules->count();
+            $route->jobs_total = $grouped->count();
 
-            $route->jobs_completed = $weekSchedules->filter(function ($schedule) {
+            $route->jobs_completed = $grouped->filter(function ($schedule) {
                 return !empty($schedule->status) && $schedule->status === 'completed';
             })->count();
 

@@ -137,7 +137,7 @@
                                                     $progressColor = '#f53b11'; // Red
                                                     $progressBg = '#fbf2ec'; // Light red
                                                     $progressIcon = 'fa-hourglass-start';
-                                                    $progressText = 'Starting';
+                                                    $progressText = 'Completed';
                                                 } elseif ($completedPercentage <= 50) {
                                                     $progressColor = '#ff9800'; // Orange
                                                     $progressBg = '#FFF3E0'; // Light orange
@@ -164,7 +164,7 @@
                                                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                                                     <i class="fa-solid {{ $progressIcon }}" style="color: {{ $progressColor }}; font-size: 14px;"></i>
                                                     <h5 style="color: {{ $progressColor }}; margin: 0; font-size: 14px;">
-                                                        {{ $progressText }} {{ $completedPercentage }}%</h5>
+                                                        {{ $completedPercentage }}% {{ $progressText }}</h5>
                                                 </div>
                                                 <div style="width: 100%; background-color: #e0e0e0; border-radius: 10px; height: 8px; overflow: hidden; margin-bottom: 5px;">
                                                     <div style="width: {{ $completedPercentage }}%; background-color: {{ $progressColor }}; height: 100%; transition: width 0.3s ease, background-color 0.3s ease;">
@@ -281,7 +281,7 @@
                                                 $progressColor = '#f53b11'; // Red
                                                 $progressBg = '#fbf2ec'; // Light red
                                                 $progressIcon = 'fa-hourglass-start';
-                                                $progressText = 'Starting';
+                                                $progressText = 'Completed';
                                             } elseif ($completedPercentage <= 50) {
                                                 $progressColor = '#ff9800'; // Orange
                                                 $progressBg = '#FFF3E0'; // Light orange
@@ -308,7 +308,7 @@
                                             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
                                                 <i class="fa-solid {{ $progressIcon }}" style="color: {{ $progressColor }}; font-size: 14px;"></i>
                                                 <h5 style="color: {{ $progressColor }}; margin: 0; font-size: 14px;">
-                                                    {{ $progressText }} {{ $completedPercentage }}%</h5>
+                                                    {{ $completedPercentage }}% {{ $progressText }}</h5>
                                             </div>
                                             <div style="width: 100%; background-color: #e0e0e0; border-radius: 10px; height: 8px; overflow: hidden; margin-bottom: 5px;">
                                                 <div style="width: {{ $completedPercentage }}%; background-color: {{ $progressColor }}; height: 100%; transition: width 0.3s ease, background-color 0.3s ease;">
