@@ -285,18 +285,20 @@
                                         @endforelse
                                     </select>
                                 </div>
-                                <div class="txt_field custom_select_route">
-                                    <select name="staff" id="staffFilter" class="form-select selectRoute" data-placeholder="Select Staff">
-                                        <option value="">All Staff</option>
-                                        @forelse($staffs as $staff)
-                                            <option value="{{ $staff->id }}" {{ $selectedStaffId == $staff->id ? 'selected' : '' }}>
-                                                {{ $staff->name }}
-                                            </option>
-                                        @empty
-                                            <option value="" disabled>no staff available</option>
-                                        @endforelse
-                                    </select>
-                                </div>
+                                @if($isAdminReportView)
+                                    <div class="txt_field custom_select_route">
+                                        <select name="staff" id="staffFilter" class="form-select selectRoute" data-placeholder="Select Staff">
+                                            <option value="">All Staff</option>
+                                            @forelse($staffs as $staff)
+                                                <option value="{{ $staff->id }}" {{ $selectedStaffId == $staff->id ? 'selected' : '' }}>
+                                                    {{ $staff->name }}
+                                                </option>
+                                            @empty
+                                                <option value="" disabled>no staff available</option>
+                                            @endforelse
+                                        </select>
+                                    </div>
+                                @endif
                                 <div class="months-pagination filter_download_dropdown_wrapper">
                                     <a href="{{ request()->fullUrlWithQuery(['month' => $previousMonth]) }}" type="button" class="pag-btn prevMonthBtn">
                                         <i class="fas fa-arrow-left"></i>
