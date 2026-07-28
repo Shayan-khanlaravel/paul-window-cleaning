@@ -35,7 +35,13 @@
             <td colspan="{{ $isAdminReportView ? 9 : 8 }}" class="text-center text-muted">No Schedule To This Week</td>
         </tr>
     @else
-        @foreach ($weekRoutes as $routeId => $schedules)
+        @php
+            $sortedWeekRoutes = collect($weekRoutes)->sortBy(function($schedules) {
+                $staffName = $schedules->first()?->StaffName?->first_name ?? $schedules->first()?->StaffName?->name ?? 'zzzz';
+                return strtolower($staffName);
+            });
+        @endphp
+        @foreach ($sortedWeekRoutes as $routeId => $schedules)
             @php
                 // --- ROUTE CALCULATIONS ---
                 $routeName = $schedules->first()->clientName->clientRouteStaff->first()->route->name ?? 'N/A';

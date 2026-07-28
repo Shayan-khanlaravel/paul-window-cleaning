@@ -386,7 +386,13 @@
                                                     </td>
                                                 </tr>
                                             @else
-                                                @foreach ($weekRoutes as $routeId => $schedules)
+                                                @php
+                                                    $sortedWeekRoutes = collect($weekRoutes)->sortBy(function($schedules) {
+                                                        $staffName = $schedules->first()?->StaffName?->first_name ?? $schedules->first()?->StaffName?->name ?? 'zzzz';
+                                                        return strtolower($staffName);
+                                                    });
+                                                @endphp
+                                                @foreach ($sortedWeekRoutes as $routeId => $schedules)
                                                     @php
                                                         $routeName = $schedules->first()->clientName?->clientRouteStaff->first()->route->name ?? 'N/A';
                                                         $totalSales = $schedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0);
