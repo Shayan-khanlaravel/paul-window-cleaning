@@ -47,7 +47,25 @@
                                                 </div>
                                                 {{$staffmember->name??''}}</td>
                                             <td>{{$staffmember->email??''}}</td>
-                                           <td>{{ \Carbon\Carbon::parse($staffmember->profile?->hiring_date)->format('m/d/Y') }}</td>
+                                            <td>
+                                                @php
+                                                    $rawDate = $staffmember->profile?->hiring_date;
+                                                    $formatted = null;
+                                                    if ($rawDate) {
+                                                        try {
+                                                            $formatted = \Carbon\Carbon::createFromFormat('m-d-y', trim($rawDate))->format('m/d/Y');
+                                                        } catch (\Exception $e) {
+                                                            // fallback: try 4-digit year format
+                                                            try {
+                                                                $formatted = \Carbon\Carbon::createFromFormat('m-d-Y', trim($rawDate))->format('m/d/Y');
+                                                            } catch (\Exception $e2) {
+                                                                $formatted = 'Invalid Date';
+                                                            }
+                                                        }
+                                                    }
+                                                @endphp
+                                                {{ $formatted ?? '-' }}
+                                            </td>
                                             {{-- <td>{{ \Carbon\Carbon::createFromFormat('d/m/Y', $staffmember->profile?->hiring_date)->format('m-d-y') ?? '' }}</td> --}}
 
                                             <td>{{$staffmember->staff_jobs_count??''}}</td>

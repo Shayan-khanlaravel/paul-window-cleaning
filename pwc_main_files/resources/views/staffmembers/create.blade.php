@@ -85,20 +85,20 @@
                                             <p>Please Enter Date of Hiring</p>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="txt_field form-floating">
-                                            <input type="number" class="form-control" name="training_rate" id="training_rate" placeholder="" step="0.01" min="0">
-                                            <label for="training_rate">Training Rate</label>
-                                            <p>Please Enter Training Rate</p>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="txt_field form-floating">
-                                            <input type="number" class="form-control" name="normal_rate" id="normal_rate" placeholder="" step="0.01" min="0">
-                                            <label for="normal_rate">Normal Rate</label>
-                                            <p>Please Enter Normal Rate</p>
-                                        </div>
-                                    </div>
+{{--                                    <div class="col-md-6">--}}
+{{--                                        <div class="txt_field form-floating">--}}
+{{--                                            <input type="number" class="form-control" name="training_rate" id="training_rate" placeholder="" step="0.01" min="0">--}}
+{{--                                            <label for="training_rate">Training Rate</label>--}}
+{{--                                            <p>Please Enter Training Rate</p>--}}
+{{--                                        </div>--}}
+{{--                                    </div>--}}
+{{--                                    <div class="col-md-6">--}}
+{{--                                        <div class="txt_field form-floating">--}}
+{{--                                            <input type="number" class="form-control" name="normal_rate" id="normal_rate" placeholder="" step="0.01" min="0">--}}
+{{--                                            <label for="normal_rate">Normal Rate</label>--}}
+{{--                                            <p>Please Enter Normal Rate</p>--}}
+{{--                                        </div>--}}
+{{--                                    </div>--}}
                                     <div class="col-md-6">
                                         <div class="form-floating txt_field input_wrapper">
                                             <input type="password" class="form-control pass_log" name="password" id="password" placeholder="" required>
