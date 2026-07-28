@@ -369,7 +369,7 @@
                                             @endphp
 
                                             <tr style="background-color: #f8f9fa; font-weight: bold; border:1px solid black !important;">
-                                                <td colspan="{{ $isAdminReportView ? 4 : 3 }}">
+                                                <td colspan="{{ $isAdminReportView ? 4 : 3 }}" style="text-align: left; padding-left: 20px;">
                                                     <h3>{{ $weekLabel }}</h3>
                                                 </td>
                                                 <td colspan="5" class="text-end" style="padding-right:20px">
