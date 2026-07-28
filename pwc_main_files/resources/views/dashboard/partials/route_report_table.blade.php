@@ -19,7 +19,13 @@
         // Result: "March - April" or "January - February"
     @endphp
 
-    <tr style="background-color: #f8f9fa; font-weight: bold; border:1px solid black !important;">
+    @if (!$loop->first)
+        <tr class="week-spacer-row">
+            <td colspan="{{ $isAdminReportView ? 9 : 8 }}"></td>
+        </tr>
+    @endif
+
+    <tr class="week-header-row">
         <td colspan="{{ $isAdminReportView ? 4 : 3 }}" style="text-align: left; padding-left: 20px;">
             <h3 class="m-0">{{ $weekName }}</h3>
         </td>
@@ -39,7 +45,7 @@
                             data-month="{{ $selectedMonthName }}" 
                             data-year="{{ $selectedYear }}" 
                             {{ $isReviewed ? 'checked' : '' }}>
-                        <label for="review_{{ $weekString }}" style="margin:0; cursor:pointer; color: #32346A;">Reviewed</label>
+                        <label for="review_{{ $weekString }}" style="margin:0; cursor:pointer; font-weight: 600; color: #32346A;">Reviewed</label>
                     </div>
                 @endif
                 <button type="button" class="btn_global btn_dark_blue exportWeekBtn" data-week="{{ $weekName }}" data-week-num="{{ $currentWeekNum }}">

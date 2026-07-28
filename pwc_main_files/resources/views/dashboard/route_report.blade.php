@@ -250,6 +250,34 @@
                 font-size: 12px;
             }
         }
+
+        /* Week Distinction Styles */
+        .week-header-row {
+            background-color: #f0f4f8 !important;
+            border-top: 4px solid #32346A !important;
+            border-bottom: 2px solid #32346A !important;
+        }
+
+        .week-header-row h3 {
+            color: #32346A !important;
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .week-spacer-row {
+            height: 30px !important;
+            background-color: #fff !important;
+            border: none !important;
+        }
+
+        .week-spacer-row td {
+            border: none !important;
+            padding: 0 !important;
+            background-color: #fff !important;
+        }
     </style>
 @endpush
 @section('navbar-title')
@@ -357,49 +385,55 @@
                                     </thead>
                                     <tbody>
 
-                                        @foreach ($data as $weekName => $weekRoutes)
-                                            @php
-                                                $weekLabel = $weekName;
-                                                preg_match('/Week\s+(\d+)/', $weekName, $weekMatches);
-                                                $currentWeekNum = isset($weekMatches[1]) ? (int) $weekMatches[1] : 1;
-                                                $dbWeekNum = $currentWeekNum - 1;
+                                            @foreach ($data as $weekName => $weekRoutes)
+                                                @php
+                                                    $weekLabel = $weekName;
+                                                    preg_match('/Week\s+(\d+)/', $weekName, $weekMatches);
+                                                    $currentWeekNum = isset($weekMatches[1]) ? (int) $weekMatches[1] : 1;
+                                                    $dbWeekNum = $currentWeekNum - 1;
 
-                                                preg_match('/\d{4}/', $selectedMonth ?? '', $yearMatch);
-                                                $selectedYear = $yearMatch[0] ?? now()->year;
+                                                    preg_match('/\d{4}/', $selectedMonth ?? '', $yearMatch);
+                                                    $selectedYear = $yearMatch[0] ?? now()->year;
 
-                                                $selectedMonthName = trim(str_replace($selectedYear, '', $selectedMonth ?? ''));
-                                            @endphp
+                                                    $selectedMonthName = trim(str_replace($selectedYear, '', $selectedMonth ?? ''));
+                                                @endphp
 
-                                            <tr style="background-color: #f8f9fa; font-weight: bold; border:1px solid black !important;">
-                                                <td colspan="{{ $isAdminReportView ? 4 : 3 }}" style="text-align: left; padding-left: 20px;">
-                                                    <h3>{{ $weekLabel }}</h3>
-                                                </td>
-                                                <td colspan="5" class="text-end" style="padding-right:20px">
-                                                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 15px; height: 100%;">
-                                                        @if ($isAdminReportView)
-                                                            @php
-                                                                $weekString = 'week' . $dbWeekNum;
-                                                                $review = $allRouteReportReviews->where('week', $weekString)
-                                                                    ->where('month', $selectedMonthName)
-                                                                    ->where('year', $selectedYear)
-                                                                    ->first();
-                                                                $isReviewed = $review ? $review->is_reviewed : false;
-                                                            @endphp
-                                                            <div class="d-flex align-items-center" style="gap: 5px;">
-                                                                <input type="checkbox" class="form-check-input review-checkbox" id="review_{{ $weekString }}" style="width: 20px; height: 20px; cursor: pointer; margin-top: 0;"
-                                                                    data-week="{{ $weekString }}"
-                                                                    data-month="{{ $selectedMonthName }}"
-                                                                    data-year="{{ $selectedYear }}"
-                                                                    {{ $isReviewed ? 'checked' : '' }}>
-                                                                <label for="review_{{ $weekString }}" style="margin:0; cursor:pointer; font-weight:600; color: #32346A;">Reviewed</label>
-                                                            </div>
-                                                        @endif
-                                                        <button type="button" class="btn_global btn_dark_blue exportWeekBtn" data-week="{{ $weekName }}" data-week-num="{{ $currentWeekNum }}">
-                                                            Export Excel <i class="fa-solid fa-file-excel"></i>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                                @if (!$loop->first)
+                                                    <tr class="week-spacer-row">
+                                                        <td colspan="{{ $isAdminReportView ? 9 : 8 }}"></td>
+                                                    </tr>
+                                                @endif
+
+                                                <tr class="week-header-row">
+                                                    <td colspan="{{ $isAdminReportView ? 4 : 3 }}" style="text-align: left; padding-left: 20px;">
+                                                        <h3>{{ $weekLabel }}</h3>
+                                                    </td>
+                                                    <td colspan="5" class="text-end" style="padding-right:20px">
+                                                        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 15px; height: 100%;">
+                                                            @if ($isAdminReportView)
+                                                                @php
+                                                                    $weekString = 'week' . $dbWeekNum;
+                                                                    $review = $allRouteReportReviews->where('week', $weekString)
+                                                                        ->where('month', $selectedMonthName)
+                                                                        ->where('year', $selectedYear)
+                                                                        ->first();
+                                                                    $isReviewed = $review ? $review->is_reviewed : false;
+                                                                @endphp
+                                                                <div class="d-flex align-items-center" style="gap: 5px;">
+                                                                    <input type="checkbox" class="form-check-input review-checkbox" id="review_{{ $weekString }}" style="width: 20px; height: 20px; cursor: pointer; margin-top: 0;"
+                                                                        data-week="{{ $weekString }}"
+                                                                        data-month="{{ $selectedMonthName }}"
+                                                                        data-year="{{ $selectedYear }}"
+                                                                        {{ $isReviewed ? 'checked' : '' }}>
+                                                                    <label for="review_{{ $weekString }}" style="margin:0; cursor:pointer; font-weight:600; color: #32346A;">Reviewed</label>
+                                                                </div>
+                                                            @endif
+                                                            <button type="button" class="btn_global btn_dark_blue exportWeekBtn" data-week="{{ $weekName }}" data-week-num="{{ $currentWeekNum }}">
+                                                                Export Excel <i class="fa-solid fa-file-excel"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
 
                                             @if ($weekRoutes->isEmpty())
                                                 <tr>
