@@ -373,9 +373,29 @@
                                                     <h3>{{ $weekLabel }}</h3>
                                                 </td>
                                                 <td colspan="5" class="text-end" style="padding-right:20px">
-                                                    <button type="button" class="btn_global btn_dark_blue exportWeekBtn" data-week="{{ $weekName }}" data-week-num="{{ $currentWeekNum }}">
-                                                        Export Excel <i class="fa-solid fa-file-excel"></i>
-                                                    </button>
+                                                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 15px; height: 100%;">
+                                                        @if ($isAdminReportView)
+                                                            @php
+                                                                $weekString = 'week' . $dbWeekNum;
+                                                                $review = $allRouteReportReviews->where('week', $weekString)
+                                                                    ->where('month', $selectedMonthName)
+                                                                    ->where('year', $selectedYear)
+                                                                    ->first();
+                                                                $isReviewed = $review ? $review->is_reviewed : false;
+                                                            @endphp
+                                                            <div class="d-flex align-items-center" style="gap: 5px;">
+                                                                <input type="checkbox" class="form-check-input review-checkbox" id="review_{{ $weekString }}" style="width: 20px; height: 20px; cursor: pointer; margin-top: 0;"
+                                                                    data-week="{{ $weekString }}"
+                                                                    data-month="{{ $selectedMonthName }}"
+                                                                    data-year="{{ $selectedYear }}"
+                                                                    {{ $isReviewed ? 'checked' : '' }}>
+                                                                <label for="review_{{ $weekString }}" style="margin:0; cursor:pointer; font-weight:600; color: #32346A;">Reviewed</label>
+                                                            </div>
+                                                        @endif
+                                                        <button type="button" class="btn_global btn_dark_blue exportWeekBtn" data-week="{{ $weekName }}" data-week-num="{{ $currentWeekNum }}">
+                                                            Export Excel <i class="fa-solid fa-file-excel"></i>
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
 
@@ -749,6 +769,44 @@
             $('.clearAllFiltersBtn').on('click', function() {
                 // Redirect to the base route report page
                 window.location.href = "{{ route('route.report') }}";
+            });
+
+            // Toggle Review Checkbox
+            $(document).on('change', '.review-checkbox', function() {
+                let checkbox = $(this);
+                let isChecked = checkbox.is(':checked') ? 1 : 0;
+                let week = checkbox.data('week');
+                let month = checkbox.data('month');
+                let year = checkbox.data('year');
+
+                checkbox.prop('disabled', true);
+
+                $.ajax({
+                    url: '{{ route('route.report.review.toggle') }}',
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        week: week,
+                        month: month,
+                        year: year,
+                        is_reviewed: isChecked
+                    },
+                    success: function(response) {
+                        checkbox.prop('disabled', false);
+                        Swal.fire({
+                            icon: "success",
+                            title: "Success",
+                            text: `Week report status updated`,
+                            confirmButtonColor: "#3085d6",
+                            confirmButtonText: "OK"
+                        });
+                    },
+                    error: function(xhr) {
+                        checkbox.prop('disabled', false);
+                        checkbox.prop('checked', !isChecked);
+                        console.error('Error saving review status');
+                    }
+                });
             });
 
             // ========== EXCEL EXPORT FUNCTIONS (AJAX-BASED) ==========

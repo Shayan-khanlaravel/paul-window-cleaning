@@ -16,6 +16,7 @@ use App\Models\{AssignRoute,
     CmsContact,
     CmsHome,
     CmsService,
+    RouteReportReview,
     Contact,
     ContactCleaning,
     ContactImage,
@@ -392,6 +393,8 @@ class WebsiteController extends Controller
             $monthEndDate->format('Y-m-d'),
         ])->get();
 
+        $allRouteReportReviews = RouteReportReview::where('year', $selectedYear)->where('month', $baseMonthName)->get();
+
         $cycleData = collect();
         foreach ($weeks as $week) {
             $weekLabel = 'Week ' . $week['week_number'] . ' | ' . $week['start_date']->format('d F') . ' - ' . $week['end_date']->format('d F');
@@ -440,7 +443,7 @@ class WebsiteController extends Controller
             $nextMonthName = $monthNames[0];
             $nextMonth = $nextMonthName . ' ' . ($selectedYear + 1);
         }
-        return view('dashboard.route_report', compact('routes', 'staffs', 'data', 'allDeposits', 'allClientPayments', 'allTimelogs', 'allStaffLogHours', 'weeks', 'months', 'selectedMonth', 'previousMonth', 'nextMonth', 'selectedRouteId', 'selectedStaffId'));
+        return view('dashboard.route_report', compact('routes', 'staffs', 'data', 'allDeposits', 'allClientPayments', 'allTimelogs', 'allStaffLogHours', 'allRouteReportReviews', 'weeks', 'months', 'selectedMonth', 'previousMonth', 'nextMonth', 'selectedRouteId', 'selectedStaffId'));
     }
 
     public function routeReportAjax(Request $request)
@@ -588,12 +591,60 @@ class WebsiteController extends Controller
             $nextMonth = $nextMonthName . ' ' . ($selectedYear + 1);
         }
 
+        $allRouteReportReviews = \App\Models\RouteReportReview::all();
+
+        $cycleData = collect();
+        foreach ($weeks as $week) {
+            $weekLabel = 'Week ' . $week['week_number'] . ' | ' . $week['start_date']->format('d F') . ' - ' . $week['end_date']->format('d F');
+            $cycleData[$weekLabel] = collect();
+        }
+        foreach ($dbData as $item) {
+            foreach ($weeks as $week) {
+                if (Carbon::parse($item->start_date)->between($week['start_date'], $week['end_date'])) {
+                    $weekLabel = 'Week ' . $week['week_number'] . ' | ' . $week['start_date']->format('d F') . ' - ' . $week['end_date']->format('d F');
+                    $cycleData[$weekLabel]->push($item);
+                    break;
+                }
+            }
+        }
+        $data = $cycleData->slice(0, 4)->map(function ($weekItems) {
+            if ($weekItems->count() > 0) {
+                return $weekItems->groupBy(function ($item) {
+                    return $item->clientName?->clientRouteStaff->first()->route->id ?? 0;
+                });
+            } else {
+                return collect();
+            }
+        });
+
+        $monthNames = array_keys($customStartDates);
+        $currentIndex = array_search($baseMonthName, $monthNames);
+
+        if ($currentIndex === false) {
+            $currentIndex = 0;
+        }
+
+        if ($currentIndex > 0) {
+            $previousMonthName = $monthNames[$currentIndex - 1];
+            $previousMonth = $previousMonthName . ' ' . $selectedYear;
+        } else {
+            $previousMonthName = $monthNames[count($monthNames) - 1];
+            $previousMonth = $previousMonthName . ' ' . ($selectedYear - 1);
+        }
+        if ($currentIndex < count($monthNames) - 1) {
+            $nextMonthName = $monthNames[$currentIndex + 1];
+            $nextMonth = $nextMonthName . ' ' . $selectedYear;
+        } else {
+            $nextMonthName = $monthNames[0];
+            $nextMonth = $nextMonthName . ' ' . ($selectedYear + 1);
+        }
+
         $months = [];
         foreach ($monthNames as $monthName) {
             $months[] = $monthName . ' ' . $selectedYear;
         }
 
-        $html = view('dashboard.partials.route_report_table', compact('data', 'allDeposits', 'allClientPayments', 'allTimelogs', 'allStaffLogHours', 'weeks', 'selectedMonth'))->render();
+        $html = view('dashboard.partials.route_report_table', compact('data', 'allDeposits', 'allClientPayments', 'allTimelogs', 'allStaffLogHours', 'allRouteReportReviews', 'weeks', 'selectedMonth'))->render();
 
         return response()->json([
             'html' => $html,
@@ -603,6 +654,29 @@ class WebsiteController extends Controller
             'months' => $months,
             'selectedYear' => $selectedYear
         ]);
+    }
+    public function toggleRouteReportReview(Request $request)
+    {
+        $request->validate([
+            'week' => 'required|string',
+            'month' => 'required|string',
+            'year' => 'required|string',
+            'is_reviewed' => 'required|boolean',
+        ]);
+
+        $review = RouteReportReview::updateOrCreate(
+            [
+                'week' => $request->week,
+                'month' => $request->month,
+                'year' => $request->year,
+            ],
+            [
+                'is_reviewed' => $request->is_reviewed,
+                'reviewed_by' => auth()->id(),
+            ]
+        );
+
+        return response()->json(['success' => true, 'review' => $review]);
     }
 
     public function routeReportExport(Request $request)

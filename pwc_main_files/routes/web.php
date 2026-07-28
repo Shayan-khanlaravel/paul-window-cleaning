@@ -87,6 +87,7 @@ Route::group(['middleware' => ['auth']], function () {
         Route::get('route_report', 'routeReport')->name('route.report');
         Route::get('route_report_ajax', 'routeReportAjax')->name('route.report.ajax');
         Route::get('route_report_export', 'routeReportExport')->name('route.report.export');
+        Route::post('route_report_review/toggle', 'toggleRouteReportReview')->name('route.report.review.toggle');
     });
     Route::controller(UserController::class)->group(function () {
         Route::get('check_password', 'checkPassword')->name('check_password');
