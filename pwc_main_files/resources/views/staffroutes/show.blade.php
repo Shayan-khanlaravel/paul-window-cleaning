@@ -1783,6 +1783,10 @@
 
                         exportData.data.forEach(monthData => {
                             monthData.forEach(weekData => {
+                                if (!weekData.routes || weekData.routes.length === 0) {
+                                    return;
+                                }
+
                                 let weeklyCashTotal = 0;
                                 let weeklyInvoiceTotal = 0;
                                 weekData.routes.forEach(route => {
