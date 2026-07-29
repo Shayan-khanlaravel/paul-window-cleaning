@@ -194,7 +194,7 @@
                                     <div class="col-md-6">
                                         <div class="txt_field form-floating">
                                             <input type="text" class="form-control" id="hiring_date" name="hiring_date" placeholder="Date of Hiring" >
-                                            <label for="hiring_date">Date of Hiring *</label>
+                                            <label for="hiring_date">Date of Hire *</label>
                                             <p>Please Enter Date of Hiring</p>
                                         </div>
                                     </div>

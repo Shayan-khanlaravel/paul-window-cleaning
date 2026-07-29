@@ -202,7 +202,7 @@
                                             <input type="text" class="form-control" id="hiring_date" name="hiring_date"
                                                 placeholder="Date of Hiring"
                                                 value="{{ $staff->profile->hiring_date ?? '' }}">
-                                            <label for="hiring_date">Date of Hiring *</label>
+                                            <label for="hiring_date">Date of Hire *</label>
                                             <p>Please Enter Date of Hiring</p>
                                         </div>
                                     </div>
