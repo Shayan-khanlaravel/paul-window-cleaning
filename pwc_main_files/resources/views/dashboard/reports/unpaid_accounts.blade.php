@@ -65,7 +65,7 @@
 
 @section('navbar-title')
     <div class="custom_justify_between">
-        <h2 class="navbar_PageTitle">Unpaid Accounts Report</h2>
+        <h2 class="navbar_PageTitle">Unpaid Accounts</h2>
     </div>
 @endsection
 
@@ -110,7 +110,6 @@
                         <div class="card-header pt-5">
                             <h3 class="card-title align-items-start flex-column">
                                 <span class="card-label fw-bolder fs-3 mb-1">{{ $staffName }}</span>
-                                <span class="text-muted mt-1 fw-bold fs-7">{{ $schedules->count() }} Unpaid Schedules</span>
                             </h3>
                         </div>
                         <div class="card-body py-3">
@@ -123,8 +122,10 @@
 {{--                                            <th class="min-w-150px">Schedule Date</th>--}}
                                             <th class="min-w-150px">Date Serviced</th>
                                             <th class="min-w-150px">Route</th>
-                                            <th class="min-w-175px">Payment Date</th>
-                                            <th class="min-w-100px text-end">Action</th>
+                                            @if(auth()->user()->hasRole('staff'))
+                                                <th class="min-w-175px">Payment Date</th>
+                                                <th class="min-w-100px text-end">Action</th>
+                                            @endif
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -145,29 +146,31 @@
                                             <td>
                                                 <span class="text-dark fw-bold d-block fs-6">{{ $schedule->route_name }}</span>
                                             </td>
-                                            <td>
-                                                @if(optional($schedule->clientSchedulePayment)->id)
-                                                    <input
-                                                        type="date"
-                                                        class="form-control form-control-sm payment-date-input"
-                                                        value="{{ now()->format('Y-m-d') }}"
-                                                        data-payment-id="{{ $schedule->clientSchedulePayment->id }}"
-                                                    >
-                                                @else
-                                                    <span class="text-muted fs-7">No payment record</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-end">
-                                                @if(optional($schedule->clientSchedulePayment)->id)
-                                                    <button
-                                                        type="button"
-                                                        class="btn btn-sm btn-primary mark-paid-btn"
-                                                        data-payment-id="{{ $schedule->clientSchedulePayment->id }}"
-                                                    >
-                                                        Save
-                                                    </button>
-                                                @endif
-                                            </td>
+                                            @if(auth()->user()->hasRole('staff'))
+                                                <td>
+                                                    @if(optional($schedule->clientSchedulePayment)->id)
+                                                        <input
+                                                            type="date"
+                                                            class="form-control form-control-sm payment-date-input"
+                                                            value="{{ now()->format('Y-m-d') }}"
+                                                            data-payment-id="{{ $schedule->clientSchedulePayment->id }}"
+                                                        >
+                                                    @else
+                                                        <span class="text-muted fs-7">No payment record</span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-end">
+                                                    @if(optional($schedule->clientSchedulePayment)->id)
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-sm btn-primary mark-paid-btn"
+                                                            data-payment-id="{{ $schedule->clientSchedulePayment->id }}"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                    @endif
+                                                </td>
+                                            @endif
                                         </tr>
                                         @endforeach
                                         <tr class="bg-light">
@@ -175,7 +178,7 @@
                                             <td class="text-end fw-bolder fs-5 text-danger">
                                                 ${{ number_format($schedules->sum(fn($s) => optional($s->clientSchedulePayment)->final_price ?? 0), 2) }}
                                             </td>
-                                            <td colspan="4"></td>
+                                            <td colspan="{{ auth()->user()->hasRole('staff') ? 4 : 2 }}"></td>
                                         </tr>
                                     </tbody>
                                 </table>
