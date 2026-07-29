@@ -71,7 +71,12 @@ class PayrollController extends Controller
         $cal = $this->getPeriodData($this->resolvePeriodKey($request));
         extract($cal);
 
-        $staffs = User::role('staff')->get();
+        $staffs = User::role('staff')
+            ->where('status', 1)
+            ->whereHas('profile', function ($query) {
+                $query->where('employment_type', 'employee');
+            })
+            ->get();
         if (Auth::user()->hasRole('staff')) {
             $staffs = $staffs->where('id', Auth::id());
         }

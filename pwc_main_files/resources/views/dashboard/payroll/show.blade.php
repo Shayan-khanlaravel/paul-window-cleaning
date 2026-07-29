@@ -52,9 +52,9 @@
                                 <tr class="fw-bold">
                                     <th class="ps-4 min-w-150px rounded-start">Route</th>
                                     <th class="min-w-100px text-end">Gross Sales</th>
-                                    <th class="min-w-100px text-end">Gross Commission</th>
+                                    <th class="min-w-100px text-end">Commission</th>
                                     <th class="min-w-150px text-end">Bonus</th>
-                                    <th class="min-w-150px text-end">Extra Hours</th>
+                                    <th class="min-w-150px text-end">Additional Pay</th>
                                     <th class="min-w-100px text-end rounded-end">Total Gross Pay</th>
                                 </tr>
                             </thead>

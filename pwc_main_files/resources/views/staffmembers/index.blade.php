@@ -73,7 +73,7 @@
                                                 @if($staffmember->status == 1)
                                                     <span class="green_success">Active</span>
                                                 @else
-                                                    <span class="brown_color_td_span">Deactive</span>
+                                                    <span class="brown_color_td_span">Inactive</span>
                                                 @endif
                                             </td>
                                             <td>

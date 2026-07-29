@@ -49,9 +49,9 @@
                                 <tr class="fw-bold text-muted bg-light">
                                     <th class="ps-4 min-w-150px rounded-start">Staff Name</th>
                                     <th class="min-w-100px">Total Gross Sales</th>
-                                    <th class="min-w-100px">Total Commission</th>
-                                    <th class="min-w-100px">Total Bonus</th>
-                                    <th class="min-w-100px">Extra Hours Pay</th>
+                                    <th class="min-w-100px">Commission</th>
+                                    <th class="min-w-100px">Bonus</th>
+                                    <th class="min-w-100px">Additional Pay</th>
                                     <th class="min-w-100px text-end rounded-end">Total Gross Pay</th>
                                     <th>Actions</th>
                                 </tr>
