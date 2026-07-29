@@ -15,7 +15,7 @@
         <section class="create_staff_member_two_sec">
             <div class="container-fluid custom_container">
                 <div class="row custom_row">
-                    <div class="col-md-8">
+                    <div class="col-md-12">
                         <div class="staff_member_routes shadow_box_wrapper">
                             <div class="">
                                 <img src="{{ asset('website') }}/{{ $staff->profile->pic ?? '' }}" alt="No Image">
@@ -44,7 +44,7 @@
                                         @csrf
                                         <button type="submit"
                                                 class="btn_global {{ $staff->status == 1 ? 'btn_dark_blue' : 'btn_grey' }}">
-                                            {{ $staff->status == 1 ? 'Deactivate' : 'Activate' }}
+                                            {{ $staff->status == 1 ? 'Inactive' : 'Active' }}
                                             <i
                                                 class="fa-solid {{ $staff->status == 1 ? 'fa-toggle-on' : 'fa-toggle-off' }}"></i>
                                         </button>
@@ -71,34 +71,18 @@
                         </div>
 
                     </div>
-                    <div class="col-md-4">
-                        <div class="row custom_row">
-                            <div class="col-md-12">
-                                <div class="jobs_completed_wrapper shadow_box_wrapper">
-                                    <h4>Jobs Completed :</h4>
-                                    <h3>{{$staff->staff_jobs_count ?? '0'}}</h3>
-                                </div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="jobs_completed_wrapper shadow_box_wrapper">
-{{--                                    <h4>In-Progress Project :</h4>--}}
-{{--                                    <h3>11</h3>--}}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <div class="col-md-12">
                         <div class="tabs_wrapper shadow_box_wrapper custom_row">
-                            <div class="create_staff_tabs_btn_wrapper">
-                                <ul class="nav nav-tabs" id="myTab" role="tablist">
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link active" id="all-tab" data-bs-toggle="tab"
-                                                data-bs-target="#all" type="button" role="tab" aria-controls="all"
-                                                aria-selected="true">All</button>
-                                    </li> 
-                                </ul>
-                            </div>
-                            <div class="filter_download_dropdown_wrapper"> 
+{{--                            <div class="create_staff_tabs_btn_wrapper">--}}
+{{--                                <ul class="nav nav-tabs" id="myTab" role="tablist">--}}
+{{--                                    <li class="nav-item" role="presentation">--}}
+{{--                                        <button class="nav-link active" id="all-tab" data-bs-toggle="tab"--}}
+{{--                                                data-bs-target="#all" type="button" role="tab" aria-controls="all"--}}
+{{--                                                aria-selected="true">All</button>--}}
+{{--                                    </li>--}}
+{{--                                </ul>--}}
+{{--                            </div>--}}
+                            <div class="filter_download_dropdown_wrapper">
                                 <div class="searchbar_download_filter_wrapper ms-auto">
                                     <form class="" role="search">
                                         <div>
@@ -108,7 +92,7 @@
                                         </div>
                                     </form>
                                     <button type="button" class="btn_global btn_blue" data-bs-target="#assign_routes"
-                                            data-bs-toggle="modal">Assign Routes <i class="fa-solid fa-plus"></i></button> 
+                                            data-bs-toggle="modal">Assign Routes <i class="fa-solid fa-plus"></i></button>
                                 </div>
                             </div>
                             <div class="tab-content" id="myTabContent">
@@ -150,7 +134,7 @@
                                             <div> No Assign Routes Available</div>
                                         @endforelse
                                     </div>
-                                </div> 
+                                </div>
                             </div>
 
                         </div>
@@ -216,10 +200,18 @@
                                     aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            @forelse($route as $assigned)
+                            <div class="download_modal_pdf_wrapper" style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e0e0e0;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" id="selectAllRoutes">
+                                    <label for="selectAllRoutes" style="margin: 0; cursor: pointer; font-weight: 500;">
+                                        Select All
+                                    </label>
+                                </div>
+                            </div>
+                            @forelse($route->sortBy('name') as $assigned)
                                 <div class="download_modal_pdf_wrapper">
                                     <div>
-                                        <input type="checkbox" name="route_id[]"
+                                        <input type="checkbox" name="route_id[]" class="route-checkbox"
                                             @if (in_array($assigned->id, $staff->staffRoute->pluck('id')->toArray())) checked @endif
                                             {{ $assigned->status == 0 ? 'disabled' : '' }}
                                             value="{{ $assigned->id }}" id="route_{{ $assigned->id }}">
@@ -506,6 +498,24 @@
     </script>
     <script>
         $(document).ready(function() {
+            // Select all / Unselect all functionality
+            $('#selectAllRoutes').on('change', function() {
+                var isChecked = $(this).is(':checked');
+                $('#assignStaff').find('.route-checkbox:not(:disabled)').prop('checked', isChecked);
+            });
+
+            // Update select all checkbox when individual checkboxes change
+            $(document).on('change', '.route-checkbox', function() {
+                var totalCheckboxes = $('#assignStaff').find('.route-checkbox:not(:disabled)').length;
+                var checkedCheckboxes = $('#assignStaff').find('.route-checkbox:not(:disabled):checked').length;
+
+                if (totalCheckboxes === checkedCheckboxes) {
+                    $('#selectAllRoutes').prop('checked', true);
+                } else {
+                    $('#selectAllRoutes').prop('checked', false);
+                }
+            });
+
             $("#assignStaff").validate({
                 rules: {
                     'route_id[]': {
