@@ -297,7 +297,9 @@ class WebsiteController extends Controller
         }
         $routes = $routesQuery->get();
 
-        $staffs = $allowedRouteIds === null ? User::role('staff')->get() : collect([auth()->user()]);
+        $staffs = $allowedRouteIds === null ? User::role('staff')->whereDoesntHave('profile', function ($q) {
+            $q->where('employment_type', 'subcontractor');
+        })->get() : collect([auth()->user()]);
 
         // Get filter values
         $selectedRouteId = $request->input('route');
@@ -381,6 +383,10 @@ class WebsiteController extends Controller
         if ($selectedStaffId) {
             $query->where('staff_id', $selectedStaffId);
         }
+
+        $query->whereDoesntHave('StaffName.profile', function ($q) {
+            $q->where('employment_type', 'subcontractor');
+        });
         $dbData = $query->get();
 
         $allDeposits = Deposit::all();
@@ -532,6 +538,10 @@ class WebsiteController extends Controller
         if ($selectedStaffId) {
             $query->where('staff_id', $selectedStaffId);
         }
+
+        $query->whereDoesntHave('StaffName.profile', function ($q) {
+            $q->where('employment_type', 'subcontractor');
+        });
 
         $dbData = $query->get();
 
@@ -773,6 +783,10 @@ class WebsiteController extends Controller
         if ($selectedStaffId) {
             $query->where('staff_id', $selectedStaffId);
         }
+
+        $query->whereDoesntHave('StaffName.profile', function ($q) {
+            $q->where('employment_type', 'subcontractor');
+        });
 
         $dbData = $query->get();
 

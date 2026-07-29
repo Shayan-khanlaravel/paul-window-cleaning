@@ -79,6 +79,7 @@ class StaffMembersController extends Controller
             'hiring_date' => isset($validatedData['hiring_date']) ? \Carbon\Carbon::createFromFormat('d/m/Y', $validatedData['hiring_date'])->format('m-d-y') : null,
             'training_rate' => $validatedData['training_rate'] ?? null,
             'normal_rate' => $validatedData['normal_rate'] ?? null,
+            'employment_type' => $request->boolean('is_subcontractor') ? 'subcontractor' : 'employee',
             'plain_password' => $validatedData['password'],
         ]);
 
@@ -187,6 +188,7 @@ class StaffMembersController extends Controller
             $profile->hiring_date = $hiringDate;
             $profile->training_rate = $validatedData['training_rate'] ?? $profile->training_rate;
             $profile->normal_rate = $validatedData['normal_rate'] ?? $profile->normal_rate;
+            $profile->employment_type = $request->boolean('is_subcontractor') ? 'subcontractor' : 'employee';
 
             if ($request->filled('password')) {
                 $profile->plain_password = $request->password;

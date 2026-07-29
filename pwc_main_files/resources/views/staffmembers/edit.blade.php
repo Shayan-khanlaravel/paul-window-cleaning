@@ -2,6 +2,104 @@
 
 @push('css')
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        .employment_type_wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            border: 1px solid #E2E2E2;
+            border-radius: 8px;
+            padding: 15px 20px;
+            background: #FAFBFC;
+        }
+
+        .employment_type_info label {
+            display: block;
+            color: #4A4A4A;
+            font-family: 'Hellix-SemiBold';
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .employment_type_info p {
+            margin: 0;
+            color: #858585;
+            font-family: 'Hellix-Regular';
+            font-size: 13px;
+        }
+
+        .employment_toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toggle_option_text {
+            font-family: 'Hellix-Medium';
+            font-size: 14px;
+            color: #A8A8A8;
+            transition: color 0.2s ease;
+        }
+
+        .toggle_option_text.active_text {
+            color: #00ADEE;
+            font-family: 'Hellix-SemiBold';
+        }
+
+        .toggle_switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+            margin: 0;
+        }
+
+        .toggle_switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle_slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background-color: #D9D9D9;
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .toggle_slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #fff;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+        }
+
+        .toggle_switch input:checked + .toggle_slider {
+            background-color: #00ADEE;
+        }
+
+        .toggle_switch input:checked + .toggle_slider:before {
+            transform: translateX(22px);
+        }
+
+        @media (max-width: 576px) {
+            .employment_type_wrapper {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
 @endpush
 @section('navbar-title')
     <div class="back_btn_navbar back_btn_navbar_create_staff">
@@ -58,6 +156,23 @@
                                 </div>
 
                                 <div class="row create_client_cus_row">
+                                    <div class="col-md-12">
+                                        @php $isSubcontractor = ($staff->profile->employment_type ?? 'employee') == 'subcontractor'; @endphp
+                                        <div class="employment_type_wrapper">
+                                            <div class="employment_type_info">
+                                                <label>Staff Type</label>
+                                                <p>Subcontractors are excluded from the Route Report</p>
+                                            </div>
+                                            <div class="employment_toggle">
+                                                <span class="toggle_option_text toggle_employee {{ !$isSubcontractor ? 'active_text' : '' }}">Employee</span>
+                                                <label class="toggle_switch">
+                                                    <input type="checkbox" name="is_subcontractor" id="is_subcontractor" value="1" {{ $isSubcontractor ? 'checked' : '' }}>
+                                                    <span class="toggle_slider"></span>
+                                                </label>
+                                                <span class="toggle_option_text toggle_subcontractor {{ $isSubcontractor ? 'active_text' : '' }}">Subcontractor</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <div class="col-md-6">
                                         <div class="txt_field form-floating">
                                             <input type="text" class="form-control" name="name" id="name"
@@ -109,6 +224,7 @@
 {{--                                            <p>Please Enter Normal Rate</p>--}}
 {{--                                        </div>--}}
 {{--                                    </div>--}}
+
                                     <div class="col-md-6">
                                         <div class="form-floating txt_field input_wrapper">
                                             <input type="password" class="form-control pass_log" name="password"
@@ -304,6 +420,16 @@
 @endsection
 @push('js')
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+
+    {{--    employment type toggle label sync--}}
+    <script>
+        $(document).ready(function() {
+            $('#is_subcontractor').on('change', function() {
+                $('.toggle_employee').toggleClass('active_text', !this.checked);
+                $('.toggle_subcontractor').toggleClass('active_text', this.checked);
+            });
+        });
+    </script>
 
     {{--    picture upload jquery --}}
     <script>
