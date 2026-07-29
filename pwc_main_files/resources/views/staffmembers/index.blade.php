@@ -93,7 +93,6 @@
                                                                 </button>
                                                             </form>
                                                         </li>
-                                                        <li><a class="dropdown-item" href="{{ route('staffmembers.edit', [$staffmember->id]) }}" >Edit</a></li>
                                                         @can('staffmembers-delete')
                                                             <li class="menu-item px-3">
                                                                 {!! Form::open(['method' => 'DELETE', 'route' => ['staffmembers.destroy', $staffmember->id], 'class' => 'delete-form']) !!}

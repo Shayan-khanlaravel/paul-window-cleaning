@@ -36,6 +36,9 @@
                                     </div>
                                 </div>
                                 <div>
+                                    <a href="{{ route('staffmembers.edit', $staff->id) }}" class="btn_global btn_dark_blue">
+                                        Edit <i class="fa-solid fa-pen"></i>
+                                    </a>
                                     <form action="{{ route('staffmembers.toggle-status', $staff->id) }}" method="POST"
                                           style="display: inline;">
                                         @csrf
