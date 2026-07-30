@@ -41,9 +41,9 @@
                     @endphp
                     <div class="d-flex align-items-center" style="gap: 5px;">
                         <input type="checkbox" class="form-check-input review-checkbox" id="review_{{ $weekString }}" style="width: 20px; height: 20px; cursor: pointer; margin-top: 0;"
-                            data-week="{{ $weekString }}" 
-                            data-month="{{ $selectedMonthName }}" 
-                            data-year="{{ $selectedYear }}" 
+                            data-week="{{ $weekString }}"
+                            data-month="{{ $selectedMonthName }}"
+                            data-year="{{ $selectedYear }}"
                             {{ $isReviewed ? 'checked' : '' }}>
                         <label for="review_{{ $weekString }}" style="margin:0; cursor:pointer; font-weight: 600; color: #32346A;">Reviewed</label>
                     </div>
@@ -174,7 +174,7 @@
                                 <ul class="m-0 p-0" style="list-style: none;">
                                     @foreach ($staffLogHoursForRoute as $logEntry)
                                         <li style="display: flex; justify-content: space-between; padding: 4px 0;">
-                                            <span>{{ $logEntry->staff?->name ?? 'Staff' }}:</span>
+                                            <span>{{ \Carbon\Carbon::parse($logEntry->service_date)->format('d M Y') }}</span>
                                             <span>{{ $logEntry->duration_hours }} hrs</span>
                                         </li>
                                     @endforeach

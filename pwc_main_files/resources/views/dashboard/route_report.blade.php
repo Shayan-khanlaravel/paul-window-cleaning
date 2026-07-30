@@ -543,7 +543,7 @@
                                                                         <ul>
                                                                             @foreach ($staffLogHoursForRoute as $logEntry)
                                                                                 <li>
-                                                                                    <span>{{ $logEntry->staff?->name ?? 'Staff' }}</span>
+                                                                                    <span>{{ \Carbon\Carbon::parse($logEntry->service_date)->format('d M Y') }}</span>
                                                                                     <span>{{ $logEntry->duration_hours }} hrs</span>
                                                                                 </li>
                                                                             @endforeach
