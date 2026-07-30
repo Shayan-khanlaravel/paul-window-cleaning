@@ -181,6 +181,37 @@
                                             <div class="col-md-12 partially_completed_wrapper">
                                                 <div class="custom_radio">
                                                     <input disabled
+                                                           class="form-check-input check_uncheck check_show_hide"
+                                                           name="option_three" type="checkbox" value="logTime"
+                                                           id="logTime"
+                                                           @if($clientSchedule->clientSchedulePayment->option_three == 'logTime') checked
+                                                        @endif>
+                                                    <label class="form-check-label" for="logTime">Log time</label>
+                                                </div>
+                                                <div class="row reason_input_fileds_wrapper"
+                                                     @if($clientSchedule->clientSchedulePayment->option_three != 'logTime') hidden
+                                                    @endif>
+                                                    <div class="col-md-6">
+                                                        <div class="txt_field">
+                                                            <input class="form-control reason_disabled" type="time"
+                                                                   name="start_time" placeholder="Start Time"
+                                                                   disabled="disabled"
+                                                                   value="{{ $clientSchedule->clientSchedulePayment->start_time ?? '' }}">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="txt_field">
+                                                            <input class="form-control reason_disabled" type="time"
+                                                                   name="end_time" placeholder="End Time"
+                                                                   disabled="disabled"
+                                                                   value="{{ $clientSchedule->clientSchedulePayment->end_time ?? '' }}">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-12 partially_completed_wrapper">
+                                                <div class="custom_radio">
+                                                    <input disabled
                                                            class="form-check-input omit_class complete_no_change  check_uncheck check_show_hide"
                                                            name="option" type="checkbox" value="omit" id="omit"
                                                            @if($clientSchedule->clientSchedulePayment->option == 'omit') checked

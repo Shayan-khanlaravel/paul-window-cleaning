@@ -182,7 +182,7 @@
                                                         <span>${{ number_format($invoiceTotal, 2) }}</span>
                                                     </div>
                                                     <div class="week_details_wrapper_total">
-                                                        <label>Complete Total :</label>
+                                                        <label>Grand Total :</label>
                                                         <span>${{ number_format($completedTotal, 2) }}</span>
                                                     </div>
                                                 </div>
@@ -453,7 +453,7 @@
                                                                 <span>${{ number_format($total, 2) }}</span>
                                                             </div>
                                                             <div class="week_details_wrapper_total">
-                                                                <label>Complete Total :</label>
+                                                                <label>Grand Total :</label>
                                                                 <span>${{ number_format($completedTotal, 2) }}</span>
                                                             </div>
                                                         </div>
@@ -621,7 +621,7 @@
                                                                 <span>${{ number_format($invoiceTotal, 2) }}</span>
                                                             </div>
                                                             <div class="week_details_wrapper_total">
-                                                                <label>Complete Total :</label>
+                                                                <label>Grand Total :</label>
                                                                 <span>${{ number_format($completedTotal, 2) }}</span>
                                                             </div>
                                                         </div>
@@ -842,7 +842,7 @@
                                                                 <span>${{ number_format($total, 2) }}</span>
                                                             </div>
                                                             <div class="week_details_wrapper_total">
-                                                                <label>Complete Total :</label>
+                                                                <label>Grand Total :</label>
                                                                 <span>${{ number_format($completedTotal, 2) }}</span>
                                                             </div>
                                                         </div>
@@ -1012,7 +1012,7 @@
                                                                 <span>${{ number_format($total, 2) }}</span>
                                                             </div>
                                                             <div class="week_details_wrapper_total">
-                                                                <label>Complete Total :</label>
+                                                                <label>Grand Total :</label>
                                                                 <span>${{ number_format($completedTotal, 2) }}</span>
                                                             </div>
                                                         </div>

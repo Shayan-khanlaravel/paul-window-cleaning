@@ -189,6 +189,26 @@
                                                 </div>
                                                 <div class="col-md-12 partially_completed_wrapper">
                                                     <div class="custom_radio">
+                                                        <input class="form-check-input check_uncheck check_show_hide" name="option_three" type="checkbox" value="logTime" id="logTime">
+                                                        <label class="form-check-label" for="logTime">Log time</label>
+                                                    </div>
+                                                    <div class="row reason_input_fileds_wrapper">
+                                                        <div class="col-md-6">
+                                                            <div class="txt_field">
+                                                                <label>Start Time</label>
+                                                                <input class="form-control reason_disabled" type="time" name="start_time" placeholder="Start Time" disabled="disabled">
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <div class="txt_field">
+                                                                <label>End Time</label>
+                                                                <input class="form-control reason_disabled" type="time" name="end_time" placeholder="End Time" disabled="disabled">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-12 partially_completed_wrapper">
+                                                    <div class="custom_radio">
                                                         <input class="form-check-input omit_class complete_no_change  check_uncheck check_show_hide" name="option" type="checkbox" value="omit" id="omit">
                                                         <label class="form-check-label" for="omit">Omit</label>
                                                     </div>
@@ -273,18 +293,32 @@
 
             // Mutual Exclusivity: Only ONE checkbox can be checked at a time
             // All main status checkboxes
-            var mainCheckboxes = "#com_no_change, #recievedPayment, #partiallyCompleted, #omit, #priorDate, #extraPaid, #workCompleted";
+            var mainCheckboxes = "#com_no_change, #recievedPayment, #partiallyCompleted, #omit, #priorDate, #extraPaid, #workCompleted, #logTime";
+
+            // Log time records actual time worked, so - same as invoice schedule
+            // reporting - it can be combined with Partially Completed / Extra Work
+            // Completed instead of closing them.
+            var logTimeCompatible = "#partiallyCompleted, #workCompleted";
 
             $(mainCheckboxes).change(function() {
                 if ($(this).prop("checked")) {
+                    var $checked = $(this);
                     // Uncheck all other checkboxes except this one
                     $(mainCheckboxes).not(this).each(function() {
-                        $(this).prop("checked", false);
+                        var $other = $(this);
+                        var isLogTimeCombo = ($checked.is('#logTime') && $other.is(logTimeCompatible)) ||
+                            ($other.is('#logTime') && $checked.is(logTimeCompatible));
+
+                        if (isLogTimeCombo) {
+                            return; // keep this pair checked together
+                        }
+
+                        $other.prop("checked", false);
                         // Trigger change to hide any related fields
-                        if ($(this).hasClass("check_show_hide")) {
-                            $(this).closest(".partially_completed_wrapper").find(".reason_input_fileds_wrapper").slideUp();
-                            $(this).closest(".partially_completed_wrapper").find(".reason_disabled").prop("disabled", true).val('');
-                            $(this).closest(".partially_completed_wrapper").find(".date_disbaled").prop("disabled", true).val('');
+                        if ($other.hasClass("check_show_hide")) {
+                            $other.closest(".partially_completed_wrapper").find(".reason_input_fileds_wrapper").slideUp();
+                            $other.closest(".partially_completed_wrapper").find(".reason_disabled").prop("disabled", true).val('');
+                            $other.closest(".partially_completed_wrapper").find(".date_disbaled").prop("disabled", true).val('');
                         }
                     });
                 }
