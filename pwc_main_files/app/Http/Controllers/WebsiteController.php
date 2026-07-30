@@ -3962,6 +3962,7 @@ class WebsiteController extends Controller
     {
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setSize(9);
 
         $rowIndex = 1;
 
@@ -3991,6 +3992,13 @@ class WebsiteController extends Controller
                 $weekLabel = "Week $currentWeekNum";
             }
 
+            $hasSchedule = $weekData && $weekData->count() > 0;
+
+            // Skip weeks with no schedule entirely when exporting all weeks
+            if ($exportType === 'all' && !$hasSchedule) {
+                continue;
+            }
+
             // Title Row - Use weekLabel with year for single week, or add month for all weeks
             if ($exportType === 'single') {
                 $sheet->setCellValue("A$rowIndex", "Route Report - $weekLabel - $selectedYear");
@@ -3998,7 +4006,7 @@ class WebsiteController extends Controller
                 $sheet->setCellValue("A$rowIndex", "Route Report - $weekLabel - $selectedMonth");
             }
             $sheet->mergeCells("A$rowIndex:I$rowIndex");
-            $sheet->getStyle("A$rowIndex")->getFont()->setBold(true)->setSize(14);
+            $sheet->getStyle("A$rowIndex")->getFont()->setBold(true)->setSize(12);
             $sheet->getStyle("A$rowIndex")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                 ->getStartColor()->setARGB('FF32346A');
             $sheet->getStyle("A$rowIndex")->getFont()->getColor()->setARGB('FFFFFFFF');
@@ -4020,7 +4028,7 @@ class WebsiteController extends Controller
             $rowIndex++;
 
             // Data Rows
-            if ($weekData && $weekData->count() > 0) {
+            if ($hasSchedule) {
                 foreach ($weekData as $routeId => $schedules) {
                     $routeName = $schedules->first()->clientName?->clientRouteStaff->first()->route->name ?? 'N/A';
                     $staffName = $schedules->first()?->StaffName?->name ?? 'N/A';
@@ -4058,18 +4066,18 @@ class WebsiteController extends Controller
 //                    $invoiceLabel->getFont()->setBold(true);
 //                    $totalSalesRich->createText(number_format($invoiceSchedules->sum(fn($s) => $s->clientSchedulePayment->final_price ?? 0), 2) . "\n");
                     $totalLabel = $totalSalesRich->createTextRun("$ ");
-                    $totalLabel->getFont()->setBold(true);
+                    $totalLabel->getFont()->setBold(true)->setSize(9);
                     $totalSalesRich->createText(number_format($totalSales, 2));
 
                     // Cash Record breakdown: Client names (bold) with amounts (not bold)
                     $cashRecordRich = new \PhpOffice\PhpSpreadsheet\RichText\RichText();
                     if ($cashSchedules->isEmpty()) {
                         $nameRun = $cashRecordRich->createTextRun('$ ');
-                        $nameRun->getFont()->setBold(true);
+                        $nameRun->getFont()->setBold(true)->setSize(9);
                         $cashRecordRich->createText('0');
                     } else {
                         $nameRun = $cashRecordRich->createTextRun('$ ');
-                        $nameRun->getFont()->setBold(true);
+                        $nameRun->getFont()->setBold(true)->setSize(9);
                         $cashRecordRich->createText(number_format($cashRecord, 2));
                     }
 
@@ -4084,17 +4092,28 @@ class WebsiteController extends Controller
                     } else {
                         $firstBilled = true;
                         foreach ($billedSchedules as $schedule) {
-                            if (!$firstBilled) $billedRich->createText("\n");
+                            if (!$firstBilled) $billedRich->createText("\n\n");
                             $firstBilled = false;
                             $clientName = $schedule->clientName->name ?? 'Unknown';
                             $scope = $schedule->clientSchedulePrice
                                 ->map(fn ($price) => $price->clientPaymentPrice?->name)
                                 ->filter()
                                 ->implode(', ');
+                            $serviceDate = $schedule->start_date
+                                ? \Carbon\Carbon::parse($schedule->start_date)->format('m/d/Y')
+                                : '';
 
                             $nameRun = $billedRich->createTextRun(
-                                $scope ? "$clientName ($scope): " : "$clientName: "
+                                $scope ? "$clientName ($scope)" : $clientName
                             );
+                            $nameRun->getFont()->setBold(true)->setSize(9);
+
+                            if ($serviceDate) {
+                                $dateRun = $billedRich->createTextRun(" [Service Date: $serviceDate]");
+                                $dateRun->getFont()->setItalic(true)->setSize(9);
+                            }
+
+                            $billedRich->createText(": ");
                             $amount = $schedule->clientSchedulePayment->final_price ?? 0;
                             $billedRich->createText(number_format($amount, 2));
                         }
@@ -4112,12 +4131,23 @@ class WebsiteController extends Controller
                     } else {
                         $firstUnpaid = true;
                         foreach ($unpaidSchedules as $schedule) {
-                            if (!$firstUnpaid) $unpaidRich->createText("\n");
+                            if (!$firstUnpaid) $unpaidRich->createText("\n\n");
                             $firstUnpaid = false;
                             $clientName = $schedule->clientName->name ?? 'Unknown';
                             $amount = $schedule->clientSchedulePayment->final_price ?? 0;
+                            $serviceDate = $schedule->start_date
+                                ? \Carbon\Carbon::parse($schedule->start_date)->format('m/d/Y')
+                                : '';
 
-                            $nameRun = $unpaidRich->createTextRun($clientName . ": ");
+                            $nameRun = $unpaidRich->createTextRun($clientName);
+                            $nameRun->getFont()->setBold(true)->setSize(9);
+
+                            if ($serviceDate) {
+                                $dateRun = $unpaidRich->createTextRun(" [Service Date: $serviceDate]");
+                                $dateRun->getFont()->setItalic(true)->setSize(9);
+                            }
+
+                            $unpaidRich->createText(": ");
                             $unpaidRich->createText(number_format($amount, 2));
                         }
                     }
@@ -4136,6 +4166,7 @@ class WebsiteController extends Controller
                             $reason = $schedule->clientSchedulePayment->reason ?? '';
 
                             $nameRun = $omitRich->createTextRun($clientName . ": " . $reason);
+                            $nameRun->getFont()->setSize(9);
                         }
                     }
 
@@ -4156,6 +4187,7 @@ class WebsiteController extends Controller
                             $nameRun = $partialRich->createTextRun(
                                 $scope ? "$clientName ($scope): " : "$clientName: "
                             );
+                            $nameRun->getFont()->setSize(9);
                             $amount = $schedule->clientSchedulePayment->final_price ?? 0;
                             $partialRich->createText(number_format($amount, 2));
                         }
