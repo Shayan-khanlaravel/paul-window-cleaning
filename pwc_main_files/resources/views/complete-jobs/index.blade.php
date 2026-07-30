@@ -2,6 +2,7 @@
 
 @push('css')
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet" />
 @endpush
 
 @section('navbar-title')
@@ -20,272 +21,136 @@
             <div class="row">
                 <div class="col-md-12">
                     <div class="custom_div">
-                        <!-- Tabs -->
-                        <ul class="nav nav-pills" id="pills-tab" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="pills-cash-tab" data-bs-toggle="pill"
-                                        data-bs-target="#pills-cash" type="button" role="tab" aria-controls="pills-cash"
-                                        aria-selected="true">Cash</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="pills-invoice-tab" data-bs-toggle="pill"
-                                        data-bs-target="#pills-invoice" type="button" role="tab"
-                                        aria-controls="pills-invoice" aria-selected="false">Invoice</button>
-                            </li>
-                        </ul>
-
-                        <div class="tab-content" id="pills-tabContent">
-                            <!-- Cash Tab -->
-                            <div class="tab-pane fade show active" id="pills-cash" role="tabpanel"
-                                 aria-labelledby="pills-cash-tab" tabindex="0">
-
-                                <!-- Filters -->
-                                <div class="row row_gap">
-                                    <div class="col-md-4">
-                                        <div class="txt_field">
-                                            <label for="cash_filter_date">Filter by Date</label>
-                                            <input class="form-control" type="date" id="cash_filter_date">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="txt_field custom_select_route">
-                                            <label for="cash_filter_route">Filter by Route</label>
-                                            <select class="form-select selectRoute" id="cash_filter_route">
-                                                <option value="">All Routes</option>
-                                                @foreach ($routes ?? [] as $route)
-                                                    <option value="{{ $route->id }}">{{ $route->name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="txt_field">
-                                            <label for="cash_filter_week">Filter by Week</label>
-                                            <select class="form-select" id="cash_filter_week">
-                                                <option value="">All Weeks</option>
-                                                <option value="week0">Week 1</option>
-                                                <option value="week1">Week 2</option>
-                                                <option value="week2">Week 3</option>
-                                                <option value="week3">Week 4</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="custom_table">
-                                            <div class="table-responsive">
-                                                <table id="cash_jobs_table" class="table cash_jobs_table datatable">
-                                                    <thead>
-                                                    <tr>
-                                                        <th>Client Name</th>
-                                                        <th>Amount</th>
-                                                        <th>Service Date</th>
-                                                        <th>Route</th>
-                                                        <th>Week</th>
-                                                        <th>Staff Name</th>
-                                                        <th>Status</th>
-                                                        <th>Action</th>
-                                                    </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                    @forelse ($completeJobs->filter(function($job) { return $job->clientSchedulePayment && $job->clientSchedulePayment->payment_type == 'cash'; }) as $job)
-                                                        <tr data-route-id="{{ $job->clientName->clientRouteStaff->first()->route_id ?? '' }}"
-                                                            data-week="{{ $job->week }}"
-                                                            data-date="{{ $job->service_date }}">
-                                                            <td>{{ $job->clientName->name ?? 'N/A' }}</td>
-                                                            <td>${{ $job->clientSchedulePayment->final_price ?? 'N/A' }}</td>
-                                                            <td>
-                                                                {{ $job->service_date ? \Carbon\Carbon::parse($job->service_date)->format('m-d-Y') : 'N/A' }}
-                                                            </td>
-                                                            <td>{{ $job->clientName->clientRouteStaff->first()->route->name ?? 'N/A' }}
-                                                            </td>
-                                                            <td>Week {{ (int) str_replace('week', '', $job->week) + 1 }}</td>
-                                                            <td>
-                                                                @if ($job->staff_id)
-                                                                    {{ \App\Models\User::find($job->staff_id)->name ?? 'N/A' }}
-                                                                @else
-                                                                    N/A
-                                                                @endif
-                                                            </td>
-                                                            <td>
-                                                            <span class="badge bg-success">
-                                                                {{ ucfirst($job->status) }}
-                                                            </span>
-                                                            </td>
-                                                            <td>
-                                                                <div class="dropdown">
-                                                                    <button class="dropdown-toggle"
-                                                                            type="button" data-bs-toggle="dropdown"
-                                                                            aria-expanded="false">
-                                                                        <i class="fa-solid fa-ellipsis"></i>
-                                                                    </button>
-                                                                    <ul class="dropdown-menu">
-{{--                                                                        <li>--}}
-{{--                                                                            <a class="dropdown-item"--}}
-{{--                                                                               href="{{ route('clients.show', $job->client_id) }}">--}}
-{{--                                                                                <i class="fa-solid fa-user me-2"></i>View Client--}}
-{{--                                                                            </a>--}}
-{{--                                                                        </li>--}}
-                                                                        <li>
-                                                                            <a class="dropdown-item view-report-btn"
-                                                                               href="javascript:void(0)"
-                                                                               data-job-id="{{ $job->id }}"
-                                                                               data-payment-type="cash"
-                                                                               data-client-name="{{ $job->clientName->name ?? 'N/A' }}"
-                                                                               data-service-date="{{ $job->service_date }}"
-                                                                               data-option="{{ $job->clientSchedulePayment->option ?? '' }}"
-                                                                               data-option-two="{{ $job->clientSchedulePayment->option_two ?? '' }}"
-                                                                               data-option-three="{{ $job->clientSchedulePayment->option_three ?? '' }}"
-                                                                               data-option-four="{{ $job->clientSchedulePayment->option_four ?? '' }}"
-                                                                               data-reason="{{ $job->clientSchedulePayment->reason ?? '' }}"
-                                                                               data-scope="{{ $job->clientSchedulePayment->scope ?? '' }}"
-                                                                               data-partial-scope="{{ $job->clientSchedulePayment->partial_completed_scope ?? '' }}"
-                                                                               data-price-one="{{ $job->clientSchedulePayment->price_charge_one ?? '' }}"
-                                                                               data-price-two="{{ $job->clientSchedulePayment->price_charge_two ?? '' }}"
-                                                                               data-amount="{{ $job->clientSchedulePayment->amount ?? '' }}"
-                                                                               data-final-price="{{ $job->clientSchedulePayment->final_price ?? '' }}">
-                                                                                <i class="fa-solid fa-file-lines me-2"></i>View
-                                                                                Report
-                                                                            </a>
-                                                                        </li>
-                                                                    </ul>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    @empty
-                                                    @endforelse
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
+                        <!-- Filters -->
+                        <div class="row row_gap">
+                            <div class="col-md-4">
+                                <div class="txt_field">
+                                    <label for="filter_date_range">Filter by Date</label>
+                                    <input class="form-control" type="text" id="filter_date_range" placeholder="Select date range" autocomplete="off">
                                 </div>
                             </div>
-
-                            <!-- Invoice Tab -->
-                            <div class="tab-pane fade" id="pills-invoice" role="tabpanel"
-                                 aria-labelledby="pills-invoice-tab" tabindex="0">
-
-                                <!-- Filters -->
-                                <div class="row row_gap">
-                                    <div class="col-md-4">
-                                        <div class="txt_field">
-                                            <label for="invoice_filter_date">Filter by Date</label>
-                                            <input class="form-control" type="date" id="invoice_filter_date">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="txt_field custom_select_route">
-                                            <label for="invoice_filter_route">Filter by Route</label>
-                                            <select class="form-select selectRoute" id="invoice_filter_route">
-                                                <option value="">All Routes</option>
-                                                @foreach ($routes ?? [] as $route)
-                                                    <option value="{{ $route->id }}">{{ $route->name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="txt_field">
-                                            <label for="invoice_filter_week">Filter by Week</label>
-                                            <select class="form-select" id="invoice_filter_week">
-                                                <option value="">All Weeks</option>
-                                                <option value="week0">Week 1</option>
-                                                <option value="week1">Week 2</option>
-                                                <option value="week2">Week 3</option>
-                                                <option value="week3">Week 4</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <div class="custom_table">
-                                            <div class="table-responsive">
-                                                <table id="invoice_jobs_table" class="table invoice_jobs_table datatable">
-                                                    <thead>
-                                                    <tr>
-                                                        <th>Client Name</th>
-                                                        <th>Amount</th>
-                                                        <th>Service Date</th>
-                                                        <th>Route</th>
-                                                        <th>Week</th>
-                                                        <th>Staff Name</th>
-                                                        <th>Status</th>
-                                                        <th>Action</th>
-                                                    </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                    @forelse ($completeJobs->filter(function($job) { return $job->clientSchedulePayment && $job->clientSchedulePayment->payment_type == 'invoice'; }) as $job)
-                                                        <tr data-route-id="{{ $job->clientName->clientRouteStaff->first()->route_id ?? '' }}"
-                                                            data-week="{{ $job->week }}"
-                                                            data-date="{{ $job->service_date }}">
-                                                            <td>{{ $job->clientName->name ?? 'N/A' }}</td>
-                                                            <td>${{ $job->clientSchedulePayment->final_price ?? 'N/A' }}</td>
-                                                            <td>
-                                                                {{ $job->service_date ? \Carbon\Carbon::parse($job->service_date)->format('m-d-Y') : 'N/A' }}
-                                                            </td>
-                                                            <td>{{ $job->clientName->clientRouteStaff->first()->route->name ?? 'N/A' }}
-                                                            </td>
-                                                            <td>Week {{ (int) str_replace('week', '', $job->week) + 1 }}</td>
-                                                            <td>
-                                                                @if ($job->staff_id)
-                                                                    {{ \App\Models\User::find($job->staff_id)->name ?? 'N/A' }}
-                                                                @else
-                                                                    N/A
+                            <div class="col-md-4">
+                                <div class="txt_field custom_select_route">
+                                    <label for="filter_route">Filter by Route</label>
+                                    <select class="form-select selectRoute" id="filter_route">
+                                        <option value="">All Routes</option>
+                                        @foreach ($routes ?? [] as $route)
+                                            <option value="{{ $route->id }}">{{ $route->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="txt_field">
+                                    <label for="filter_week">Filter by Week</label>
+                                    <select class="form-select" id="filter_week">
+                                        <option value="">All Weeks</option>
+                                        <option value="week0">Week 1</option>
+                                        <option value="week1">Week 2</option>
+                                        <option value="week2">Week 3</option>
+                                        <option value="week3">Week 4</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="custom_table">
+                                    <div class="table-responsive">
+                                        <table id="jobs_table" class="table jobs_table datatable">
+                                            <thead>
+                                            <tr>
+                                                <th>Client Name</th>
+                                                <th>Payment Type</th>
+                                                <th>Amount</th>
+                                                <th>Service Date</th>
+                                                <th>Service Day</th>
+                                                <th>Route</th>
+                                                <th>Week</th>
+                                                <th>Staff Name</th>
+                                                <th>Status</th>
+                                                <th>Action</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            @forelse ($completeJobs->filter(function($job) { return $job->clientSchedulePayment; }) as $job)
+                                                @php $paymentType = $job->clientSchedulePayment->payment_type; @endphp
+                                                <tr data-route-id="{{ $job->clientName->clientRouteStaff->first()->route_id ?? '' }}"
+                                                    data-week="{{ $job->week }}"
+                                                    data-date="{{ $job->service_date }}">
+                                                    <td>{{ $job->clientName->name ?? 'N/A' }}</td>
+                                                    <td>
+                                                        <span class="badge bg-secondary">{{ ucfirst($paymentType) }}</span>
+                                                    </td>
+                                                    <td>${{ $job->clientSchedulePayment->final_price ?? 'N/A' }}</td>
+                                                    <td>
+                                                        {{ $job->service_date ? \Carbon\Carbon::parse($job->service_date)->format('m-d-Y') : 'N/A' }}
+                                                    </td>
+                                                    <td>
+                                                        {{ $job->service_date ? \Carbon\Carbon::parse($job->service_date)->format('l') : 'N/A' }}
+                                                    </td>
+                                                    <td>{{ $job->clientName->clientRouteStaff->first()->route->name ?? 'N/A' }}
+                                                    </td>
+                                                    <td>Week {{ (int) str_replace('week', '', $job->week) + 1 }}</td>
+                                                    <td>
+                                                        @if ($job->staff_id)
+                                                            {{ \App\Models\User::find($job->staff_id)->name ?? 'N/A' }}
+                                                        @else
+                                                            N/A
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                    <span class="badge bg-success">
+                                                        {{ ucfirst($job->status) }}
+                                                    </span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="dropdown">
+                                                            <button class="dropdown-toggle"
+                                                                    type="button" data-bs-toggle="dropdown"
+                                                                    aria-expanded="false">
+                                                                <i class="fa-solid fa-ellipsis"></i>
+                                                            </button>
+                                                            <ul class="dropdown-menu">
+                                                                @if ($paymentType === 'invoice')
+                                                                    <li>
+                                                                        <a class="dropdown-item"
+                                                                           href="{{ route('clients.show', $job->client_id) }}">
+                                                                            <i class="fa-solid fa-user me-2"></i>View
+                                                                            Client
+                                                                        </a>
+                                                                    </li>
                                                                 @endif
-                                                            </td>
-                                                            <td>
-                                                            <span class="badge bg-success">
-                                                                {{ ucfirst($job->status) }}
-                                                            </span>
-                                                            </td>
-                                                            <td>
-                                                                <div class="dropdown">
-                                                                    <button class="dropdown-toggle"
-                                                                            type="button" data-bs-toggle="dropdown"
-                                                                            aria-expanded="false">
-                                                                        <i class="fa-solid fa-ellipsis"></i>
-                                                                    </button>
-                                                                    <ul class="dropdown-menu">
-                                                                        <li>
-                                                                            <a class="dropdown-item"
-                                                                               href="{{ route('clients.show', $job->client_id) }}">
-                                                                                <i class="fa-solid fa-user me-2"></i>View
-                                                                                Client
-                                                                            </a>
-                                                                        </li>
-                                                                        <li>
-                                                                            <a class="dropdown-item view-report-btn"
-                                                                               href="javascript:void(0)"
-                                                                               data-job-id="{{ $job->id }}"
-                                                                               data-payment-type="invoice"
-                                                                               data-client-name="{{ $job->clientName->name ?? 'N/A' }}"
-                                                                               data-service-date="{{ $job->service_date }}"
-                                                                               data-option="{{ $job->clientSchedulePayment->option ?? '' }}"
-                                                                               data-option-two="{{ $job->clientSchedulePayment->option_two ?? '' }}"
-                                                                               data-option-three="{{ $job->clientSchedulePayment->option_three ?? '' }}"
-                                                                               data-option-four="{{ $job->clientSchedulePayment->option_four ?? '' }}"
-                                                                               data-reason="{{ $job->clientSchedulePayment->reason ?? '' }}"
-                                                                               data-scope="{{ $job->clientSchedulePayment->scope ?? '' }}"
-                                                                               data-partial-scope="{{ $job->clientSchedulePayment->partial_completed_scope ?? '' }}"
-                                                                               data-price-one="{{ $job->clientSchedulePayment->price_charge_one ?? '' }}"
-                                                                               data-price-two="{{ $job->clientSchedulePayment->price_charge_two ?? '' }}"
-                                                                               data-amount="{{ $job->clientSchedulePayment->amount ?? '' }}"
-                                                                               data-start-time="{{ $job->clientSchedulePayment->start_time ?? '' }}"
-                                                                               data-end-time="{{ $job->clientSchedulePayment->end_time ?? '' }}"
-                                                                               data-final-price="{{ $job->clientSchedulePayment->final_price ?? '' }}">
-                                                                                <i class="fa-solid fa-file-lines me-2"></i>View
-                                                                                Report
-                                                                            </a>
-                                                                        </li>
-                                                                    </ul>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    @empty
-                                                    @endforelse
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
+                                                                <li>
+                                                                    <a class="dropdown-item view-report-btn"
+                                                                       href="javascript:void(0)"
+                                                                       data-job-id="{{ $job->id }}"
+                                                                       data-payment-type="{{ $paymentType }}"
+                                                                       data-client-name="{{ $job->clientName->name ?? 'N/A' }}"
+                                                                       data-service-date="{{ $job->service_date }}"
+                                                                       data-option="{{ $job->clientSchedulePayment->option ?? '' }}"
+                                                                       data-option-two="{{ $job->clientSchedulePayment->option_two ?? '' }}"
+                                                                       data-option-three="{{ $job->clientSchedulePayment->option_three ?? '' }}"
+                                                                       data-option-four="{{ $job->clientSchedulePayment->option_four ?? '' }}"
+                                                                       data-reason="{{ $job->clientSchedulePayment->reason ?? '' }}"
+                                                                       data-scope="{{ $job->clientSchedulePayment->scope ?? '' }}"
+                                                                       data-partial-scope="{{ $job->clientSchedulePayment->partial_completed_scope ?? '' }}"
+                                                                       data-price-one="{{ $job->clientSchedulePayment->price_charge_one ?? '' }}"
+                                                                       data-price-two="{{ $job->clientSchedulePayment->price_charge_two ?? '' }}"
+                                                                       data-amount="{{ $job->clientSchedulePayment->amount ?? '' }}"
+                                                                       data-start-time="{{ $job->clientSchedulePayment->start_time ?? '' }}"
+                                                                       data-end-time="{{ $job->clientSchedulePayment->end_time ?? '' }}"
+                                                                       data-final-price="{{ $job->clientSchedulePayment->final_price ?? '' }}">
+                                                                        <i class="fa-solid fa-file-lines me-2"></i>View
+                                                                        Report
+                                                                    </a>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                            @endforelse
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
@@ -585,6 +450,7 @@
 
 @push('js')
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         $(document).ready(function() {
 
@@ -593,31 +459,38 @@
                 allowClear: true
             });
 
-            // Initialize DataTables for both tabs
-            var cashTable = $('.cash_jobs_table').DataTable({
-                "searching": true,
-                "bLengthChange": true,
-                "paging": true,
-                "info": true,
-                "ordering": true,
-                "order": [
-                    [2, "desc"]
-                ], // Sort by service date descending
-                "pageLength": 10,
-                "lengthMenu": [
-                    [10, 25, 50, -1],
-                    [10, 25, 50, "All"]
-                ]
+            var filterStartDate = '';
+            var filterEndDate = '';
+
+            flatpickr("#filter_date_range", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                onChange: function(selectedDates) {
+                    if (selectedDates.length === 2) {
+                        var toStr = function(d) {
+                            return d.getFullYear() + '-' +
+                                ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+                                ('0' + d.getDate()).slice(-2);
+                        };
+                        filterStartDate = toStr(selectedDates[0]);
+                        filterEndDate = toStr(selectedDates[1]);
+                    } else {
+                        filterStartDate = '';
+                        filterEndDate = '';
+                    }
+                    applyFilters();
+                }
             });
 
-            var invoiceTable = $('.invoice_jobs_table').DataTable({
+            // Initialize DataTable for the combined jobs list
+            var jobsTable = $('.jobs_table').DataTable({
                 "searching": true,
                 "bLengthChange": true,
                 "paging": true,
                 "info": true,
                 "ordering": true,
                 "order": [
-                    [2, "desc"]
+                    [3, "desc"]
                 ], // Sort by service date descending
                 "pageLength": 10,
                 "lengthMenu": [
@@ -629,25 +502,22 @@
             // Custom search box
             $(document).on("input", '.custom_search_box', function() {
                 var searchValue = $(this).val();
-                cashTable.search(searchValue).draw();
-                invoiceTable.search(searchValue).draw();
+                jobsTable.search(searchValue).draw();
             });
 
-            // Cash Tab Filters
-            function applyCashFilters() {
-                var filterDate = $('#cash_filter_date').val();
-                var filterRoute = $('#cash_filter_route').val();
-                var filterWeek = $('#cash_filter_week').val();
+            // Filters
+            function applyFilters() {
+                var filterRoute = $('#filter_route').val();
+                var filterWeek = $('#filter_week').val();
 
                 // Use DataTables custom search
                 $.fn.dataTable.ext.search.push(
                     function(settings, data, dataIndex) {
-                        // Only apply to cash table
-                        if (settings.nTable.id !== 'cash_jobs_table') {
+                        if (settings.nTable.id !== 'jobs_table') {
                             return true;
                         }
 
-                        var row = cashTable.row(dataIndex).node();
+                        var row = jobsTable.row(dataIndex).node();
                         var routeId = $(row).data('route-id') || '';
                         var week = $(row).data('week') || '';
                         var date = $(row).data('date') || '';
@@ -660,7 +530,11 @@
                             return false;
                         }
 
-                        if (filterDate && date != filterDate) {
+                        if (filterStartDate && date && date < filterStartDate) {
+                            return false;
+                        }
+
+                        if (filterEndDate && date && date > filterEndDate) {
                             return false;
                         }
 
@@ -668,53 +542,11 @@
                     }
                 );
 
-                cashTable.draw();
+                jobsTable.draw();
                 $.fn.dataTable.ext.search.pop();
             }
 
-            $('#cash_filter_date, #cash_filter_route, #cash_filter_week').on('change', applyCashFilters);
-
-            // Invoice Tab Filters
-            function applyInvoiceFilters() {
-                var filterDate = $('#invoice_filter_date').val();
-                var filterRoute = $('#invoice_filter_route').val();
-                var filterWeek = $('#invoice_filter_week').val();
-
-                // Use DataTables custom search
-                $.fn.dataTable.ext.search.push(
-                    function(settings, data, dataIndex) {
-                        // Only apply to invoice table
-                        if (settings.nTable.id !== 'invoice_jobs_table') {
-                            return true;
-                        }
-
-                        var row = invoiceTable.row(dataIndex).node();
-                        var routeId = $(row).data('route-id') || '';
-                        var week = $(row).data('week') || '';
-                        var date = $(row).data('date') || '';
-
-                        if (filterRoute && routeId != filterRoute) {
-                            return false;
-                        }
-
-                        if (filterWeek && week != filterWeek) {
-                            return false;
-                        }
-
-                        if (filterDate && date != filterDate) {
-                            return false;
-                        }
-
-                        return true;
-                    }
-                );
-
-                invoiceTable.draw();
-                $.fn.dataTable.ext.search.pop();
-            }
-
-            $('#invoice_filter_date, #invoice_filter_route, #invoice_filter_week').on('change',
-                applyInvoiceFilters);
+            $('#filter_route, #filter_week').on('change', applyFilters);
 
             // Handle View Report button click
             $(document).on('click', '.view-report-btn', function() {
