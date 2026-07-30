@@ -4010,26 +4010,50 @@ class WebsiteController extends Controller
             $sheet->getStyle("A$rowIndex")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
                 ->getStartColor()->setARGB('FF32346A');
             $sheet->getStyle("A$rowIndex")->getFont()->getColor()->setARGB('FFFFFFFF');
-            $sheet->getStyle("A$rowIndex")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("A$rowIndex")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
+                ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+            $sheet->getRowDimension($rowIndex)->setRowHeight(24);
             $rowIndex++;
 
             $rowIndex++; // Empty row
 
-            // Header Row
-            $headers = ['Route', 'Staff Name', 'Total Sales', 'Cash Received', 'HRs', 'Billed', 'Unpaid Accounts', 'Omit', 'Partial'];
+            // Header Row - Billed (green) and Unpaid Accounts (red) get their own
+            // header colors so the two columns are distinguishable at a glance
+            $headers = ['Route', 'Staff', 'Total Sales', 'Cash Receive', 'HRs', 'Billed', 'Unpaid Accounts', 'Omit', 'Partial'];
             $colIndex = 'A';
             foreach ($headers as $header) {
-                $sheet->setCellValue($colIndex . $rowIndex, $header);
-                $sheet->getStyle($colIndex . $rowIndex)->getFont()->setBold(true);
-                $sheet->getStyle($colIndex . $rowIndex)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                    ->getStartColor()->setARGB('FF5bc4ea');
+                $headerCell = $sheet->getStyle($colIndex . $rowIndex);
+                $sheet->setCellValue($colIndex . $rowIndex, strtoupper($header));
+
+                if ($header === 'Billed') {
+                    $headerFillColor = 'FF28A745';
+                    $headerFontColor = 'FFFFFFFF';
+                } elseif ($header === 'Unpaid Accounts') {
+                    $headerFillColor = 'FFDC3545';
+                    $headerFontColor = 'FFFFFFFF';
+                } else {
+                    $headerFillColor = 'F6F8FB';
+                    $headerFontColor = 'FF32346A';
+                }
+
+                $headerCell->getFont()->setBold(true)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color($headerFontColor));
+                $headerCell->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setARGB($headerFillColor);
+                $headerCell->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
+                    ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+                $headerCell->getBorders()->getAllBorders()
+                    ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
+                    ->getColor()->setARGB('FFFFFFFF');
                 $colIndex++;
             }
+            $sheet->getRowDimension($rowIndex)->setRowHeight(20);
             $rowIndex++;
 
             // Data Rows
             if ($hasSchedule) {
+                $routeRowCounter = 0;
                 foreach ($weekData as $routeId => $schedules) {
+                    $routeRowCounter++;
                     $routeName = $schedules->first()->clientName?->clientRouteStaff->first()->route->name ?? 'N/A';
                     $staffName = $schedules->first()?->StaffName?->name ?? 'N/A';
                         $staffName = $staffName === 'N/A' ? 'N/A' : preg_replace('/^(\S+)\s+(\S).*/', '$1 $2', $staffName);
@@ -4103,10 +4127,15 @@ class WebsiteController extends Controller
                                 ? \Carbon\Carbon::parse($schedule->start_date)->format('m/d/Y')
                                 : '';
 
+                            $bulletRun = $billedRich->createTextRun("\u{25CF} ");
+                            $bulletRun->getFont()->setBold(true)->setSize(9)
+                                ->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF1E8449'));
+
                             $nameRun = $billedRich->createTextRun(
                                 $scope ? "$clientName ($scope)" : $clientName
                             );
-                            $nameRun->getFont()->setBold(true)->setSize(9);
+                            $nameRun->getFont()->setBold(true)->setSize(9)
+                                ->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF1E8449'));
 
                             if ($serviceDate) {
                                 $dateRun = $billedRich->createTextRun(" [Service Date: $serviceDate]");
@@ -4139,8 +4168,13 @@ class WebsiteController extends Controller
                                 ? \Carbon\Carbon::parse($schedule->start_date)->format('m/d/Y')
                                 : '';
 
+                            $bulletRun = $unpaidRich->createTextRun("\u{25CF} ");
+                            $bulletRun->getFont()->setBold(true)->setSize(9)
+                                ->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FFB03A2E'));
+
                             $nameRun = $unpaidRich->createTextRun($clientName);
-                            $nameRun->getFont()->setBold(true)->setSize(9);
+                            $nameRun->getFont()->setBold(true)->setSize(9)
+                                ->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FFB03A2E'));
 
                             if ($serviceDate) {
                                 $dateRun = $unpaidRich->createTextRun(" [Service Date: $serviceDate]");
@@ -4208,13 +4242,19 @@ class WebsiteController extends Controller
                     // Hours
                     $sheet->setCellValue("E$rowIndex", number_format($totalHours, 2));
 
-                    // Billed with breakdown (bold labels, normal amounts)
+                    // Billed with breakdown (bold labels, normal amounts) - shaded green
+                    // so it reads as a distinct block from the Unpaid column
                     $sheet->setCellValue("F$rowIndex", $billedRich);
                     $sheet->getStyle("F$rowIndex")->getAlignment()->setWrapText(true);
+                    $sheet->getStyle("F$rowIndex")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                        ->getStartColor()->setARGB('FFE9F7EF');
 
-                    // Unpaid with breakdown (bold labels, normal amounts)
+                    // Unpaid with breakdown (bold labels, normal amounts) - shaded red/pink
+                    // so Billed vs Unpaid are visually distinguishable at a glance
                     $sheet->setCellValue("G$rowIndex", $unpaidRich);
                     $sheet->getStyle("G$rowIndex")->getAlignment()->setWrapText(true);
+                    $sheet->getStyle("G$rowIndex")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                        ->getStartColor()->setARGB('FFFDEDEC');
 
                     // Omit with client names and reasons (bold names and labels, normal text)
                     $sheet->setCellValue("H$rowIndex", $omitRich);
@@ -4223,6 +4263,20 @@ class WebsiteController extends Controller
                     // Partial with client names and scope (bold names and labels, normal text)
                     $sheet->setCellValue("I$rowIndex", $partialRich);
                     $sheet->getStyle("I$rowIndex")->getAlignment()->setWrapText(true);
+
+                    // Zebra-stripe the non-Billed/Unpaid columns so rows are easy to
+                    // scan without diluting the fixed green/red column shading
+                    if ($routeRowCounter % 2 === 0) {
+                        $sheet->getStyle("A$rowIndex:E$rowIndex")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                            ->getStartColor()->setARGB('FFF7F7F9');
+                        $sheet->getStyle("H$rowIndex:I$rowIndex")->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                            ->getStartColor()->setARGB('FFF7F7F9');
+                    }
+
+                    // Thin grid border around the whole row for a clean, printable look
+                    $sheet->getStyle("A$rowIndex:I$rowIndex")->getBorders()->getAllBorders()
+                        ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
+                        ->getColor()->setARGB('FFDDDDDD');
 
                     // Align all cells in this row to the top (rows grow tall due to
                     // wrapped multi-line rich text, and the default vertical
@@ -4235,7 +4289,13 @@ class WebsiteController extends Controller
             } else {
                 $sheet->setCellValue("A$rowIndex", "No Schedule To This Week");
                 $sheet->mergeCells("A$rowIndex:I$rowIndex");
-                $sheet->getStyle("A$rowIndex")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle("A$rowIndex")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
+                    ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+                $sheet->getStyle("A$rowIndex")->getFont()->setItalic(true)->getColor()->setARGB('FF888888');
+                $sheet->getStyle("A$rowIndex")->getBorders()->getAllBorders()
+                    ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
+                    ->getColor()->setARGB('FFDDDDDD');
+                $sheet->getRowDimension($rowIndex)->setRowHeight(20);
                 $rowIndex++;
             }
 
