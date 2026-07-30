@@ -1286,9 +1286,9 @@
                         <hr class="my-4">
 
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0">Previous Log Hours</h5>
+                            <h5 class="mb-0">Time Journal</h5>
                             <div>
-                                <strong>Total Log Hours: </strong>
+                                <strong>Total Hours: </strong>
                                 <span id="logHoursTotal">0.00</span> hrs
                             </div>
                         </div>
